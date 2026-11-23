@@ -109,7 +109,8 @@ fun AppRoot(settings: AppSettings) {
             composable("progress") { ProgressScreen(nav) }
             composable("plan/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> PlanScreen(nav, e.arguments!!.getInt("id")) }
             composable("quiz?practice={p}", arguments = listOf(navArgument("p") { type = NavType.BoolType; defaultValue = false })) { e -> QuizScreen(nav, e.arguments!!.getBoolean("p")) }
-            composable("prayer") { PrayerScreen(nav, settings) }
+            composable("prayer?o={o}", arguments = listOf(navArgument("o") { type = NavType.IntType; defaultValue = 0 })) { e -> PrayerScreen(nav, settings, e.arguments!!.getInt("o")) }
+            composable("memory") { MemoryScreen(nav, settings) }
             composable("settings") { SettingsScreen(nav, settings) }
         }
     }

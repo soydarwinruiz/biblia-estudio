@@ -100,3 +100,18 @@ data class Study(
     val sermonApplication: String = "", val conclusion: String = "",
     val created: Long = System.currentTimeMillis(), val updated: Long = System.currentTimeMillis()
 )
+
+/** Reflexión escrita por el usuario para una lección. */
+@Serializable
+@Entity(tableName = "lesson_reflections")
+data class LessonReflection(@PrimaryKey val lessonId: Int, val text: String, val updated: Long = System.currentTimeMillis())
+
+/** Versículo en memorización (sistema Leitner: caja 0..6, próxima revisión en días epoch). */
+@Serializable
+@Entity(tableName = "memory_verses", indices = [Index(value = ["book", "chapter", "verse"], unique = true)])
+data class MemoryVerse(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val book: Int, val chapter: Int, val verse: Int, val verseEnd: Int,
+    val box: Int = 0, val nextReview: Long = 0, val reviews: Int = 0,
+    val created: Long = System.currentTimeMillis()
+)

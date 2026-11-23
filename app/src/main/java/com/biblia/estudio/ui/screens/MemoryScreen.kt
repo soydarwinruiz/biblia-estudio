@@ -1,0 +1,126 @@
+package com.biblia.estudio.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.biblia.estudio.app
+import com.biblia.estudio.data.content.PassageRef
+import com.biblia.estudio.data.prefs.AppSettings
+import com.biblia.estudio.data.user.MemoryVerse
+import com.biblia.estudio.data.user.today
+import com.biblia.estudio.ui.components.BackTopBar
+import com.biblia.estudio.ui.components.EmptyState
+import com.biblia.estudio.ui.openRef
+import com.biblia.estudio.ui.theme.Serif
+import kotlinx.coroutines.launch
+
+private val BOX_NAMES = listOf("Nuevo", "Aprendiendo", "Aprendiendo", "Repasando", "Repasando", "Afianzado", "Memorizado")
+
+private fun MemoryVerse.ref() = PassageRef(book, chapter, verse, chapter, verseEnd)
+
+/** Primera letra de cada palabra: ayuda para recordar sin ver el texto completo. */
+private fun hint(text: String) = text.split(" ").joinToString(" ") { w ->
+    val i = w.indexOfFirst { it.isLetter() }
+    if (i < 0) w else w.substring(0, i + 1) + w.substring(i + 1).map { if (it.isLetter()) '_' else it }.joinToString("")
+}
+
+@Composable
+fun MemoryScreen(nav: NavController, settings: AppSettings) {
+    val c = LocalContext.current.app; val scope = rememberCoroutineScope()
+    val all by c.user.dao.memoryVerses().collectAsState(initial = emptyList())
+    var session by remember { mutableStateOf<List<MemoryVerse>?>(null) }
+    var idx by remember { mutableIntStateOf(0) }
+    var known by remember { mutableIntStateOf(0) }
+    val due = all.filter { it.nextReview <= today() }
+
+    Scaffold(topBar = { BackTopBar("Memorizar versículos", { if (session != null) session = null else nav.popBackStack() }) }) { pad ->
+        val s = session
+        if (s != null) {
+            if (idx >= s.size) {
+                Column(Modifier.padding(pad).fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text("🧠", fontSize = 64.sp)
+                    Text("Repaso terminado", style = MaterialTheme.typography.headlineSmall)
+                    Text("Recordaste $known de ${s.size}. +${known * 5} puntos", textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { session = null }) { Text("Volver") }
+                }
+            } else ReviewCard(s[idx], settings, idx, s.size) { knew ->
+                scope.launch { c.user.reviewMemory(s[idx], knew); if (knew) known++; idx++ }
+            }
+            return@Scaffold
+        }
+        LazyColumn(Modifier.padding(pad), contentPadding = PaddingValues(bottom = 24.dp)) {
+            item {
+                Card(Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("${all.size} versículos · ${all.count { it.box >= 6 }} memorizados", style = MaterialTheme.typography.titleMedium)
+                        Text("Repaso espaciado: cada vez que recuerdas un versículo, se repasa con menos frecuencia (1, 2, 4, 7, 15, 30 y 60 días).", style = MaterialTheme.typography.bodySmall)
+                        Button(onClick = { session = due; idx = 0; known = 0 }, enabled = due.isNotEmpty(), modifier = Modifier.padding(top = 8.dp)) {
+                            Text(if (due.isEmpty()) "Nada pendiente hoy" else "Repasar ahora (${due.size})")
+                        }
+                    }
+                }
+            }
+            if (all.isEmpty()) item { EmptyState(Icons.Filled.Psychology, "Aún no hay versículos", "En el lector, selecciona un versículo y toca «Memorizar».") }
+            items(all, key = { it.id }) { m ->
+                VerseItem(m.ref(), settings.version, BOX_NAMES[m.box] + if (m.nextReview <= today()) " · para hoy" else "", null, { nav.openRef(m.ref()) }) {
+                    IconButton(onClick = { scope.launch { c.user.dao.deleteMemory(m.id) } }) { Icon(Icons.Filled.Delete, "Quitar") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewCard(m: MemoryVerse, settings: AppSettings, index: Int, total: Int, onAnswer: (Boolean) -> Unit) {
+    val c = LocalContext.current.app
+    val text by produceState("", m) { value = c.content.passageText(settings.version, m.ref()) }
+    var reveal by remember(m) { mutableStateOf(false) }
+    var showHint by remember(m) { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().padding(top = 64.dp).verticalScroll(rememberScrollState()).padding(24.dp)) {
+        LinearProgressIndicator(progress = { index.toFloat() / total }, modifier = Modifier.fillMaxWidth())
+        Text("${index + 1} de $total", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp))
+        Spacer(Modifier.height(24.dp))
+        Text(c.content.label(m.ref()), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Text("Recita el versículo de memoria", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(Modifier.height(20.dp))
+        ElevatedCard(Modifier.fillMaxWidth()) {
+            Text(
+                when { reveal -> text; showHint -> hint(text); else -> "• • •" },
+                Modifier.padding(20.dp).fillMaxWidth(), style = MaterialTheme.typography.titleMedium.copy(fontFamily = Serif), textAlign = TextAlign.Center
+            )
+        }
+        Spacer(Modifier.height(20.dp))
+        if (!reveal) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                OutlinedButton(onClick = { showHint = true }, enabled = !showHint) { Text("Pista") }
+                Spacer(Modifier.width(12.dp))
+                Button(onClick = { reveal = true }) { Text("Mostrar") }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                IconButton(onClick = { c.speaker.speak("mem", listOf(text)) }) { Icon(Icons.Filled.VolumeUp, "Escuchar") }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                OutlinedButton(onClick = { onAnswer(false) }) { Text("No lo recordé") }
+                Spacer(Modifier.width(12.dp))
+                Button(onClick = { onAnswer(true) }) { Text("¡Lo sé!") }
+            }
+        }
+    }
+}

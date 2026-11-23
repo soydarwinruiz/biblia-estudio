@@ -13,15 +13,26 @@ android {
         applicationId = "com.biblia.estudio"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
+    }
+    signingConfigs {
+        // Clave propia y estable: permite instalar actualizaciones sin desinstalar.
+        // Repositorio privado y uso personal; no publiques este archivo.
+        create("release") {
+            storeFile = rootProject.file("keystore/biblia-release.jks")
+            storePassword = "BibliaEstudio2026"
+            keyAlias = "biblia"
+            keyPassword = "BibliaEstudio2026"
+        }
     }
     buildTypes {
+        debug { signingConfig = signingConfigs.getByName("release") }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

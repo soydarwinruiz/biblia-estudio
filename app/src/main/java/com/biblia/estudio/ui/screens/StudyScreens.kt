@@ -182,7 +182,15 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
     val total by produceState(0) { value = c.content.lessonCount() }
     val todayId by produceState(-1) { value = c.content.lessonOfDay(today()).id }
     var preview by remember { mutableStateOf<PassageRef?>(null) }
-    Scaffold(topBar = { BackTopBar("Lección ${id} de $total", { nav.popBackStack() }) }) { pad ->
+    val reflection by c.user.dao.reflection(id).collectAsState(initial = null)
+    var draft by remember(id, reflection) { mutableStateOf(reflection?.text ?: "") }
+    val speaking by c.speaker.speaking.collectAsState()
+    DisposableEffect(id) { onDispose { if (c.speaker.speaking.value?.startsWith("lesson") == true) c.speaker.stop() } }
+    Scaffold(topBar = { BackTopBar("Lección ${id} de $total", { nav.popBackStack() }) {
+        IconButton(onClick = { lesson?.let { l -> c.speaker.toggle("lesson$id", listOf(l.title) + l.content.split(Regex("\n\\s*\n")).map { it.removePrefix("## ").removePrefix("- ") }) } }) {
+            Icon(if (speaking == "lesson$id") Icons.Filled.StopCircle else Icons.Filled.VolumeUp, "Escuchar lección")
+        }
+    } }) { pad ->
         val l = lesson ?: return@Scaffold Loading()
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(20.dp)) {
             if (id == todayId) AssistChip(onClick = {}, label = { Text("Lección de hoy") })
@@ -197,6 +205,18 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
             InfoCardPlain {
                 Text("Para reflexionar", style = MaterialTheme.typography.titleMedium)
                 l.questions.forEachIndexed { i, q -> Text("${i + 1}. $q", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp)) }
+                OutlinedTextField(draft, { draft = it }, Modifier.fillMaxWidth().padding(top = 10.dp), label = { Text("Mi reflexión") },
+                    placeholder = { Text("Escribe tus respuestas y lo que Dios te enseña…") }, minLines = 4)
+                Row {
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = {
+                        scope.launch {
+                            if (draft.isBlank()) c.user.dao.deleteReflection(id)
+                            else c.user.dao.upsertReflection(com.biblia.estudio.data.user.LessonReflection(id, draft.trim()))
+                            android.widget.Toast.makeText(nav.context, "Reflexión guardada", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }, enabled = draft != (reflection?.text ?: "")) { Text("Guardar reflexión") }
+                }
                 if (l.book > 0) TextButton(onClick = { nav.navigate("intro/${l.book}") }) { Text("Ver introducción completa del libro") }
             }
             Spacer(Modifier.height(12.dp))

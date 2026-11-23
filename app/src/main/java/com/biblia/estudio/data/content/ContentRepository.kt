@@ -18,7 +18,7 @@ import java.util.zip.GZIPInputStream
 class ContentRepository(private val context: Context) {
     companion object {
         const val DB_NAME = "bible_content.db"
-        const val CONTENT_VERSION = 1
+        const val CONTENT_VERSION = 2
     }
 
     private var db: SQLiteDatabase? = null

@@ -75,6 +75,7 @@ class DailyWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
                 @Suppress("MissingPermission")
                 NotificationManagerCompat.from(applicationContext).notify(1, n)
             }
+            runCatching { VerseWidget.refreshAll(applicationContext) }
             Notifications.schedule(applicationContext, settings.notifications, settings.notifyHour, settings.notifyMinute)
         } catch (e: Exception) {
             return Result.retry()
