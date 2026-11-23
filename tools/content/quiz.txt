@@ -1,0 +1,180 @@
+# pregunta | correcta | incorrecta1 | incorrecta2 | incorrecta3 | referencia | dificultad
+¿Qué creó Dios en el primer día? | La luz | Los animales | El sol y la luna | Las plantas | GEN 1:3-5 | 1
+¿En qué día creó Dios al hombre? | El sexto | El cuarto | El quinto | El séptimo | GEN 1:26-31 | 1
+¿Cómo se llamaba el huerto donde Dios puso a Adán? | Edén | Getsemaní | Gosén | Sarón | GEN 2:8 | 1
+¿Quién fue el primer hijo de Adán y Eva? | Caín | Abel | Set | Enoc | GEN 4:1 | 1
+¿Qué personaje "caminó con Dios, y desapareció, porque le llevó Dios"? | Enoc | Matusalén | Noé | Lamec | GEN 5:24 | 2
+¿Cuántos días y noches llovió durante el diluvio? | 40 | 7 | 150 | 12 | GEN 7:12 | 1
+¿Cuál fue la señal del pacto de Dios con Noé? | El arco iris | La circuncisión | El día de reposo | Una columna de nube | GEN 9:13 | 1
+¿De qué ciudad salió Abram con su padre Taré? | Ur de los caldeos | Babilonia | Nínive | Damasco | GEN 11:31 | 2
+¿Qué nombre dio Dios a Sarai? | Sara | Rebeca | Raquel | Agar | GEN 17:15 | 1
+¿Qué rey y sacerdote bendijo a Abram y recibió los diezmos? | Melquisedec | Abimelec | Faraón | Jetro | GEN 14:18-20 | 2
+¿En qué se convirtió la mujer de Lot? | Una estatua de sal | Una piedra | Polvo | Una columna de fuego | GEN 19:26 | 1
+¿Qué animal proveyó Dios en lugar de Isaac? | Un carnero | Un cordero | Un becerro | Una paloma | GEN 22:13 | 2
+¿Por qué vendió Esaú su primogenitura? | Por un guiso de lentejas | Por plata | Por un manto | Por una tierra | GEN 25:29-34 | 1
+¿Qué nuevo nombre recibió Jacob después de luchar con el ángel? | Israel | Judá | Efraín | Abraham | GEN 32:28 | 1
+¿Cuántos hijos tuvo Jacob? | 12 | 10 | 7 | 13 | GEN 35:22 | 1
+¿Qué regalo especial le hizo Jacob a José? | Una túnica de colores | Un anillo | Una espada | Un cayado | GEN 37:3 | 1
+¿En qué país José llegó a ser gobernador? | Egipto | Babilonia | Persia | Canaán | GEN 41:41 | 1
+¿Quién sacó a Moisés del río Nilo? | La hija de Faraón | Su madre | Miriam | Séfora | EXO 2:5-10 | 1
+¿Desde dónde habló Dios a Moisés en el monte Horeb? | Una zarza ardiente | Una nube | Un torbellino | Una cueva | EXO 3:2 | 1
+¿Qué nombre reveló Dios a Moisés? | YO SOY EL QUE SOY | El Shaddai | Jehová Jireh | El Elyon | EXO 3:14 | 2
+¿Cuántas plagas envió Dios sobre Egipto? | 10 | 7 | 12 | 3 | EXO 7-12 | 1
+¿Cuál fue la última plaga de Egipto? | La muerte de los primogénitos | Las tinieblas | Las langostas | El granizo | EXO 12:29 | 1
+¿Qué comió Israel en el desierto durante cuarenta años? | Maná | Trigo | Dátiles | Higos | EXO 16:35 | 1
+¿En qué monte recibió Moisés los Diez Mandamientos? | Sinaí | Carmelo | Sion | Nebo | EXO 19:20 | 1
+¿Qué ídolo hizo Aarón para el pueblo? | Un becerro de oro | Una serpiente de bronce | Una imagen de Baal | Un toro de plata | EXO 32:4 | 1
+¿Quién ayudó a sostener los brazos de Moisés junto con Aarón? | Hur | Josué | Caleb | Jetro | EXO 17:12 | 2
+¿De qué tribu eran los sacerdotes de Israel? | Leví | Judá | Benjamín | Efraín | NUM 3:6-10 | 1
+¿Qué libro contiene las leyes sobre los sacrificios y la santidad? | Levítico | Números | Josué | Rut | LEV 1:1 | 1
+¿Qué día del año entraba el sumo sacerdote al Lugar Santísimo? | El día de la expiación | La Pascua | Pentecostés | La fiesta de los tabernáculos | LEV 16:29-34 | 2
+¿Cuántos espías envió Moisés a Canaán? | 12 | 2 | 10 | 40 | NUM 13:1-16 | 1
+¿Cuáles espías dieron un buen informe? | Josué y Caleb | Aarón y Hur | Eleazar y Finees | Nadab y Abiú | NUM 14:6-9 | 1
+¿Qué hizo Moisés para sanar a los mordidos por serpientes? | Levantó una serpiente de bronce | Golpeó la roca | Ofreció un cordero | Oró toda la noche | NUM 21:8-9 | 2
+¿Qué animal habló a Balaam? | Su asna | Un camello | Un león | Un buey | NUM 22:28 | 1
+¿Desde qué monte vio Moisés la Tierra Prometida? | Nebo | Sinaí | Hermón | Ebal | DEU 34:1 | 2
+¿Cuál es el "Shemá" de Israel? | Oye, Israel: Jehová nuestro Dios, Jehová uno es | Jehová es mi pastor | Santo, santo, santo | En el principio creó Dios | DEU 6:4 | 2
+¿Quién sucedió a Moisés como líder de Israel? | Josué | Caleb | Aarón | Gedeón | JOS 1:1-2 | 1
+¿Quién escondió a los espías en Jericó? | Rahab | Débora | Rut | Jael | JOS 2:1-6 | 1
+¿Cuántas veces rodearon Jericó el séptimo día? | 7 | 1 | 3 | 12 | JOS 6:15 | 1
+¿Qué jueza de Israel juzgaba bajo una palmera? | Débora | Jael | Ana | Miriam | JDG 4:4-5 | 2
+¿Con cuántos hombres venció Gedeón a los madianitas? | 300 | 3.000 | 12 | 70 | JDG 7:7 | 1
+¿Dónde residía la fuerza de Sansón? | En su cabello no cortado | En sus brazos | En su espada | En su manto | JDG 16:17 | 1
+¿Quién dijo: "Tu pueblo será mi pueblo, y tu Dios mi Dios"? | Rut | Noemí | Orfa | Ester | RUT 1:16 | 1
+¿Con quién se casó Rut? | Booz | Obed | Elimelec | Isaí | RUT 4:13 | 1
+¿Quién fue el bisnieto de Rut? | David | Salomón | Saúl | Samuel | RUT 4:17 | 2
+¿Cómo se llamaba la madre del profeta Samuel? | Ana | Penina | Elisabet | Rut | 1SA 1:20 | 1
+¿Quién fue el primer rey de Israel? | Saúl | David | Salomón | Samuel | 1SA 10:1 | 1
+¿Con qué venció David a Goliat? | Una honda y una piedra | Una espada | Una lanza | Sus manos | 1SA 17:49-50 | 1
+¿Quién fue el gran amigo de David, hijo de Saúl? | Jonatán | Abner | Joab | Absalón | 1SA 18:1 | 1
+¿Qué profeta confrontó a David por su pecado con Betsabé? | Natán | Gad | Samuel | Elías | 2SA 12:1-7 | 1
+¿Qué hijo de David se rebeló contra él? | Absalón | Salomón | Amnón | Adonías | 2SA 15:1-12 | 2
+¿Qué pidió Salomón a Dios? | Sabiduría | Riquezas | Larga vida | Victoria sobre sus enemigos | 1KI 3:9 | 1
+¿Quién construyó el primer templo de Jerusalén? | Salomón | David | Ezequías | Zorobabel | 1KI 6:1 | 1
+¿Qué profeta fue alimentado por cuervos? | Elías | Eliseo | Jeremías | Jonás | 1KI 17:6 | 1
+¿En qué monte desafió Elías a los profetas de Baal? | Carmelo | Sinaí | Horeb | Moriah | 1KI 18:19-20 | 1
+¿Cómo subió Elías al cielo? | En un torbellino | En una nube | Por una escalera | Caminando | 2KI 2:11 | 1
+¿Qué general sirio fue sanado de lepra al zambullirse en el Jordán? | Naamán | Ben-adad | Hazael | Rabsaces | 2KI 5:14 | 1
+¿Cuántas veces se zambulló Naamán en el Jordán? | 7 | 3 | 1 | 12 | 2KI 5:14 | 2
+¿Qué rey niño comenzó a reinar a los ocho años y halló el libro de la ley? | Josías | Joás | Ezequías | Uzías | 2KI 22:1-8 | 2
+¿Qué imperio llevó cautivo al reino del sur (Judá)? | Babilonia | Asiria | Persia | Egipto | 2KI 25:1-11 | 2
+¿Qué imperio destruyó el reino del norte (Israel) en el 722 a.C.? | Asiria | Babilonia | Grecia | Roma | 2KI 17:6 | 3
+¿Qué rey persa permitió el regreso de los judíos a Jerusalén? | Ciro | Darío | Artajerjes | Asuero | EZR 1:1-3 | 2
+¿Quién reconstruyó los muros de Jerusalén? | Nehemías | Esdras | Zorobabel | Hageo | NEH 2:17 | 1
+¿En cuántos días se terminó el muro en tiempos de Nehemías? | 52 | 40 | 7 | 120 | NEH 6:15 | 3
+¿Qué reina arriesgó su vida para salvar a su pueblo? | Ester | Vasti | Jezabel | La reina de Sabá | EST 4:16 | 1
+¿Quién era el primo que crió a Ester? | Mardoqueo | Amán | Asuero | Hegai | EST 2:7 | 1
+¿Qué libro comienza con "Había en tierra de Uz un varón"? | Job | Rut | Ester | Jonás | JOB 1:1 | 2
+¿Cuántos salmos tiene el libro de los Salmos? | 150 | 100 | 119 | 175 | PSA 150 | 1
+¿Cuál es el capítulo más largo de la Biblia? | Salmo 119 | Salmo 23 | Isaías 53 | Génesis 1 | PSA 119 | 1
+¿Cuál es el capítulo más corto de la Biblia? | Salmo 117 | Salmo 1 | Juan 3 | Abdías 1 | PSA 117 | 2
+¿Qué salmo comienza "Jehová es mi pastor; nada me faltará"? | Salmo 23 | Salmo 1 | Salmo 91 | Salmo 121 | PSA 23:1 | 1
+Según Proverbios, ¿qué es el principio de la sabiduría? | El temor de Jehová | La riqueza | La experiencia | La juventud | PRO 9:10 | 1
+¿Quién escribió la mayor parte de Proverbios? | Salomón | David | Agur | Lemuel | PRO 1:1 | 1
+¿Qué libro dice "Vanidad de vanidades, todo es vanidad"? | Eclesiastés | Proverbios | Job | Lamentaciones | ECC 1:2 | 1
+¿Qué profeta vio al Señor sentado en un trono alto y sublime? | Isaías | Jeremías | Ezequiel | Amós | ISA 6:1 | 1
+¿Qué profeta anunció que una virgen concebiría y daría a luz un hijo, Emanuel? | Isaías | Miqueas | Malaquías | Daniel | ISA 7:14 | 1
+¿Qué capítulo de Isaías describe al Siervo sufriente "herido por nuestras rebeliones"? | Isaías 53 | Isaías 40 | Isaías 9 | Isaías 61 | ISA 53:5 | 2
+¿Qué profeta es conocido como "el profeta llorón"? | Jeremías | Isaías | Oseas | Habacuc | JER 9:1 | 2
+¿Qué profeta vio un valle de huesos secos? | Ezequiel | Daniel | Zacarías | Joel | EZK 37:1 | 1
+¿Cuántos amigos de Daniel fueron echados al horno de fuego? | 3 | 2 | 4 | 7 | DAN 3:19-23 | 1
+¿Por qué fue echado Daniel al foso de los leones? | Por orar a Dios | Por robar | Por no comer la comida del rey | Por mentir | DAN 6:10-16 | 1
+¿Qué profeta se casó con Gomer como ilustración del amor de Dios? | Oseas | Amós | Joel | Miqueas | HOS 1:2-3 | 2
+¿Qué profeta pasó tres días en el vientre de un gran pez? | Jonás | Elías | Nahúm | Abdías | JON 1:17 | 1
+¿A qué ciudad fue enviado Jonás a predicar? | Nínive | Tarsis | Babilonia | Jope | JON 1:2 | 1
+¿Qué profeta anunció que el Mesías nacería en Belén? | Miqueas | Isaías | Zacarías | Malaquías | MIC 5:2 | 2
+¿Qué profeta dijo: "Mas el justo por su fe vivirá"? | Habacuc | Sofonías | Hageo | Nahúm | HAB 2:4 | 2
+¿Cuál es el último libro del Antiguo Testamento? | Malaquías | Zacarías | Hageo | Ezequiel | MAL 1:1 | 1
+¿Cuántos libros tiene el Antiguo Testamento? | 39 | 27 | 46 | 66 | GEN 1:1 | 1
+¿Cuántos libros tiene el Nuevo Testamento? | 27 | 39 | 24 | 30 | MAT 1:1 | 1
+¿En qué ciudad nació Jesús? | Belén | Nazaret | Jerusalén | Capernaum | MAT 2:1 | 1
+¿Qué regalos ofrecieron los magos a Jesús? | Oro, incienso y mirra | Plata, oro y perlas | Vino, aceite y pan | Corderos y palomas | MAT 2:11 | 1
+¿Quién bautizó a Jesús? | Juan el Bautista | Pedro | Andrés | Zacarías | MAT 3:13-16 | 1
+¿Cuántos días ayunó Jesús en el desierto? | 40 | 7 | 3 | 12 | MAT 4:2 | 1
+¿Con qué respondió Jesús a cada tentación del diablo? | Con la Escritura | Con silencio | Con un milagro | Con una parábola | MAT 4:4-10 | 1
+¿En qué monte predicó Jesús las bienaventuranzas? | Un monte en Galilea | El monte Sinaí | El monte de los Olivos | El monte Carmelo | MAT 5:1 | 2
+¿Cuántos discípulos escogió Jesús como apóstoles? | 12 | 70 | 7 | 3 | MRK 3:14 | 1
+¿Qué oficio tenía Mateo antes de seguir a Jesús? | Cobrador de impuestos | Pescador | Carpintero | Médico | MAT 9:9 | 1
+¿Qué oficio tenían Pedro y Andrés? | Pescadores | Carpinteros | Pastores | Fabricantes de tiendas | MAT 4:18 | 1
+¿Cuál fue el primer milagro de Jesús según Juan? | Convertir el agua en vino | Sanar a un ciego | Multiplicar los panes | Calmar la tempestad | JHN 2:1-11 | 1
+¿Con cuántos panes y peces alimentó Jesús a los cinco mil? | 5 panes y 2 peces | 7 panes y 3 peces | 12 panes y 5 peces | 2 panes y 5 peces | MAT 14:17-21 | 1
+¿Quién caminó sobre el agua hacia Jesús? | Pedro | Juan | Jacobo | Tomás | MAT 14:29 | 1
+¿A quién resucitó Jesús después de cuatro días en la tumba? | Lázaro | La hija de Jairo | El hijo de la viuda de Naín | Dorcas | JHN 11:39-44 | 1
+¿Qué fariseo visitó a Jesús de noche? | Nicodemo | Gamaliel | José de Arimatea | Simón | JHN 3:1-2 | 1
+¿Qué le dijo Jesús a Nicodemo que era necesario? | Nacer de nuevo | Ayunar más | Dar a los pobres | Guardar el día de reposo | JHN 3:3 | 1
+¿Qué cobrador de impuestos subió a un árbol para ver a Jesús? | Zaqueo | Mateo | Bartimeo | Simón | LUK 19:2-4 | 1
+¿En qué parábola un hijo malgasta su herencia y regresa a su padre? | El hijo pródigo | El sembrador | Los talentos | El buen samaritano | LUK 15:11-32 | 1
+¿Quién ayudó al hombre herido en el camino a Jericó? | Un samaritano | Un sacerdote | Un levita | Un fariseo | LUK 10:33 | 1
+¿Qué hermana se sentó a los pies de Jesús a escucharlo? | María | Marta | Salomé | Juana | LUK 10:39 | 1
+¿Cuántos leprosos sanó Jesús en Lucas 17 y cuántos volvieron a dar gracias? | 10 y 1 | 7 y 2 | 12 y 3 | 5 y 1 | LUK 17:12-17 | 2
+¿Qué dijo Jesús: "Yo soy el camino, y la verdad, y la ..."? | Vida | Luz | Puerta | Resurrección | JHN 14:6 | 1
+¿Quién negó a Jesús tres veces? | Pedro | Judas | Tomás | Juan | MAT 26:69-75 | 1
+¿Por cuántas piezas de plata traicionó Judas a Jesús? | 30 | 20 | 40 | 100 | MAT 26:15 | 1
+¿En qué huerto oró Jesús antes de ser arrestado? | Getsemaní | Edén | Gólgota | Betania | MAT 26:36 | 1
+¿Qué gobernador romano entregó a Jesús para ser crucificado? | Poncio Pilato | Herodes | Félix | Festo | MAT 27:24-26 | 1
+¿Quién ayudó a Jesús a llevar la cruz? | Simón de Cirene | José de Arimatea | Nicodemo | Juan | MRK 15:21 | 1
+¿Cómo se llamaba el lugar donde crucificaron a Jesús? | Gólgota | Getsemaní | Betania | Emaús | JHN 19:17 | 1
+¿Quién pidió el cuerpo de Jesús para sepultarlo? | José de Arimatea | Pedro | Nicodemo | Lázaro | MAT 27:57-58 | 1
+¿A quién se apareció Jesús primero después de resucitar según Marcos? | María Magdalena | Pedro | Juan | Su madre | MRK 16:9 | 2
+¿Qué discípulo dudó de la resurrección hasta ver las heridas de Jesús? | Tomás | Felipe | Bartolomé | Andrés | JHN 20:24-28 | 1
+¿A qué aldea iban los dos discípulos con quienes caminó Jesús resucitado? | Emaús | Betania | Caná | Naín | LUK 24:13 | 1
+¿Cuántos días después de la resurrección ascendió Jesús? | 40 | 3 | 7 | 50 | ACT 1:3 | 2
+¿Quién reemplazó a Judas como apóstol? | Matías | Bernabé | Silas | Esteban | ACT 1:26 | 2
+¿Qué fiesta se celebraba cuando el Espíritu Santo descendió en Hechos 2? | Pentecostés | La Pascua | Los tabernáculos | Purim | ACT 2:1 | 1
+¿Cuántas personas se añadieron a la iglesia el día de Pentecostés? | Unas 3.000 | 120 | 5.000 | 500 | ACT 2:41 | 2
+¿Quién fue el primer mártir cristiano? | Esteban | Jacobo | Pedro | Felipe | ACT 7:59-60 | 1
+¿A quién bautizó Felipe en el camino a Gaza? | Al eunuco etíope | A Cornelio | A Lidia | Al carcelero | ACT 8:26-38 | 2
+¿Camino a qué ciudad se convirtió Saulo de Tarso? | Damasco | Jerusalén | Antioquía | Roma | ACT 9:3 | 1
+¿En qué ciudad fueron llamados "cristianos" los discípulos por primera vez? | Antioquía | Jerusalén | Roma | Éfeso | ACT 11:26 | 2
+¿Qué centurión romano recibió el evangelio por medio de Pedro? | Cornelio | Julio | Claudio Lisias | Félix | ACT 10:1-48 | 2
+¿Quién acompañó a Pablo en su primer viaje misionero? | Bernabé | Silas | Timoteo | Lucas | ACT 13:2 | 2
+¿Qué vendedora de púrpura se convirtió en Filipos? | Lidia | Priscila | Febe | Dorcas | ACT 16:14 | 2
+¿Qué hacían Pablo y Silas a medianoche en la cárcel de Filipos? | Oraban y cantaban himnos | Dormían | Planeaban escapar | Predicaban a los soldados | ACT 16:25 | 1
+¿Qué oficio tenía Pablo además de predicar? | Fabricante de tiendas | Pescador | Médico | Carpintero | ACT 18:3 | 2
+¿En qué isla naufragó Pablo camino a Roma? | Malta | Chipre | Creta | Patmos | ACT 28:1 | 2
+¿Quién escribió el libro de los Hechos? | Lucas | Pablo | Pedro | Juan | ACT 1:1 | 2
+¿Cuál es la paga del pecado según Romanos 6:23? | La muerte | La pobreza | La enfermedad | La tristeza | ROM 6:23 | 1
+Según Romanos 3:23, ¿cuántos están destituidos de la gloria de Dios? | Todos | Los gentiles | Los judíos | Los incrédulos | ROM 3:23 | 1
+Según Efesios 2:8, ¿por medio de qué somos salvos? | Por gracia mediante la fe | Por obras | Por la ley | Por el bautismo | EPH 2:8 | 1
+¿Cuál es el capítulo del amor? | 1 Corintios 13 | Juan 3 | Romanos 8 | 1 Juan 4 | 1CO 13 | 1
+Según 1 Corintios 13:13, ¿cuál es la mayor de las tres virtudes? | El amor | La fe | La esperanza | La paciencia | 1CO 13:13 | 1
+¿Cuántos elementos tiene el fruto del Espíritu en Gálatas 5? | 9 | 7 | 12 | 3 | GAL 5:22-23 | 2
+¿Qué pieza de la armadura de Dios es la Palabra de Dios? | La espada del Espíritu | El escudo de la fe | El yelmo de la salvación | La coraza de justicia | EPH 6:17 | 1
+¿Qué carta dice "Todo lo puedo en Cristo que me fortalece"? | Filipenses | Colosenses | Efesios | Gálatas | PHP 4:13 | 1
+¿A qué joven pastor escribió Pablo dos cartas? | Timoteo | Tito | Filemón | Epafrodito | 1TI 1:2 | 1
+¿Qué carta trata del esclavo fugitivo Onésimo? | Filemón | Tito | Colosenses | 2 Timoteo | PHM 1:10 | 2
+¿Qué capítulo es conocido como "el salón de la fe"? | Hebreos 11 | Romanos 4 | Santiago 2 | Gálatas 3 | HEB 11 | 1
+Según Hebreos 11:1, ¿qué es la fe? | La certeza de lo que se espera | Un sentimiento | Una obra | Una tradición | HEB 11:1 | 1
+¿Qué carta dice que la fe sin obras está muerta? | Santiago | Romanos | Hebreos | 1 Pedro | JAS 2:26 | 1
+¿En qué isla recibió Juan la revelación del Apocalipsis? | Patmos | Malta | Creta | Chipre | REV 1:9 | 1
+¿A cuántas iglesias se dirigen las cartas de Apocalipsis 2 y 3? | 7 | 12 | 3 | 10 | REV 1:11 | 1
+¿Qué iglesia de Apocalipsis era "tibia"? | Laodicea | Éfeso | Esmirna | Filadelfia | REV 3:16 | 2
+¿Cómo se describe a sí mismo Jesús en Apocalipsis 22:13? | El Alfa y la Omega | El León de Judá | El Buen Pastor | El Pan de vida | REV 22:13 | 2
+¿Cuál es el versículo más corto de la Biblia en español (RVR1960)? | Jesús lloró | Orad sin cesar | Estad siempre gozosos | Dios es amor | JHN 11:35 | 1
+¿Qué dijo Juan el Bautista al ver a Jesús? | He aquí el Cordero de Dios | Este es mi Hijo amado | Bendito el que viene | Tú eres el Cristo | JHN 1:29 | 1
+¿Qué significa "Emanuel"? | Dios con nosotros | Dios salva | Príncipe de paz | Ungido | MAT 1:23 | 1
+¿Qué significa el nombre "Jesús"? | Jehová salva | Dios con nosotros | El ungido | Hijo de David | MAT 1:21 | 2
+¿Qué significa "Cristo"? | Ungido | Salvador | Rey | Profeta | JHN 1:41 | 2
+¿Cuántas veces dijo Jesús que hay que perdonar? | Setenta veces siete | Siete veces | Tres veces | Una vez | MAT 18:22 | 1
+¿Cuál es el primer y gran mandamiento según Jesús? | Amar a Dios con todo el corazón | No matar | Honrar a los padres | Guardar el día de reposo | MAT 22:37-38 | 1
+¿Qué pidió Jesús en la Gran Comisión? | Hacer discípulos a todas las naciones | Construir templos | Volver a Galilea | Esperar en silencio | MAT 28:19 | 1
+¿Qué tribu de Israel dio origen a los reyes de la línea de David? | Judá | Benjamín | Leví | Efraín | GEN 49:10 | 2
+¿Qué rey de Babilonia tuvo un sueño de una gran estatua? | Nabucodonosor | Belsasar | Darío | Ciro | DAN 2:1-31 | 2
+¿Qué palabras escribió la mano en la pared del palacio de Belsasar? | Mene, Mene, Tekel, Uparsin | Santo, santo, santo | Aleluya, amén | Emanuel | DAN 5:25 | 3
+¿Quién fue llevado al cielo sin morir además de Elías? | Enoc | Moisés | Abraham | Samuel | GEN 5:24 | 2
+¿Cuál era el nombre del suegro de Moisés? | Jetro | Labán | Booz | Elí | EXO 3:1 | 2
+¿Qué profetisa alabó a Dios con un pandero tras cruzar el mar Rojo? | Miriam | Débora | Hulda | Ana | EXO 15:20 | 2
+¿Qué sacerdote crió a Samuel en el tabernáculo? | Elí | Aarón | Sadoc | Abiatar | 1SA 2:11 | 2
+¿Qué reina malvada persiguió a Elías? | Jezabel | Atalía | Vasti | Herodías | 1KI 19:1-2 | 2
+¿Qué profeta recibió una doble porción del espíritu de Elías? | Eliseo | Isaías | Jonás | Natán | 2KI 2:9 | 2
+¿Cuántos años vivió Matusalén, el hombre más longevo? | 969 | 930 | 950 | 777 | GEN 5:27 | 3
+¿Cuántos años estuvo Israel en el desierto? | 40 | 70 | 12 | 400 | NUM 14:33 | 1
+¿Cuántos años duró el cautiverio babilónico según Jeremías? | 70 | 40 | 400 | 7 | JER 29:10 | 2
+¿Qué apóstol fue llamado "el discípulo a quien Jesús amaba"? | Juan | Pedro | Andrés | Jacobo | JHN 13:23 | 2
+¿Qué apóstol fue el primero en morir como mártir? | Jacobo, hermano de Juan | Pedro | Andrés | Tomás | ACT 12:2 | 3
+¿Qué pareja mintió acerca del precio de su propiedad? | Ananías y Safira | Aquila y Priscila | Zacarías y Elisabet | Elcana y Ana | ACT 5:1-10 | 2
+¿Quiénes eran los padres de Juan el Bautista? | Zacarías y Elisabet | José y María | Elcana y Ana | Joaquín y Ana | LUK 1:5-13 | 2
+¿Qué ángel anunció a María el nacimiento de Jesús? | Gabriel | Miguel | Rafael | Uriel | LUK 1:26-27 | 1
+¿Qué anciano tomó al niño Jesús en brazos en el templo y bendijo a Dios? | Simeón | Zacarías | Elí | Nicodemo | LUK 2:25-28 | 2
+¿A qué edad discutía Jesús con los maestros en el templo? | 12 años | 30 años | 8 años | 15 años | LUK 2:42-46 | 2
+¿Aproximadamente a qué edad comenzó Jesús su ministerio? | 30 años | 20 años | 40 años | 12 años | LUK 3:23 | 2

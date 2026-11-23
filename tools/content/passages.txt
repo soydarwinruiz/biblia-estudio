@@ -1,0 +1,225 @@
+# USFM CAP:VERS-CAP:VERS | Título
+GEN 1:1-31 | La creación
+GEN 2:4-25 | El hombre en el huerto
+GEN 3:1-24 | La caída y la primera promesa
+GEN 6:5-22 | Noé halla gracia
+GEN 12:1-9 | El llamado de Abram
+GEN 15:1-21 | El pacto con Abram
+GEN 22:1-19 | Dios proveerá
+GEN 28:10-22 | La escalera de Jacob
+GEN 32:22-32 | Jacob lucha con Dios
+GEN 45:1-15 | José se da a conocer
+GEN 50:15-21 | Dios lo encaminó a bien
+EXO 3:1-15 | La zarza ardiente
+EXO 12:1-28 | La Pascua
+EXO 14:10-31 | El paso del mar Rojo
+EXO 16:1-18 | El maná del cielo
+EXO 20:1-21 | Los Diez Mandamientos
+EXO 33:12-23 | Muéstrame tu gloria
+LEV 16:1-34 | El día de la expiación
+LEV 19:1-18 | Sed santos
+NUM 13:25-14:9 | El informe de los espías
+NUM 21:4-9 | La serpiente de bronce
+DEU 6:1-25 | Amarás al Señor tu Dios
+DEU 8:1-20 | No te olvides del Señor
+DEU 30:11-20 | Escoge la vida
+JOS 1:1-9 | Esfuérzate y sé valiente
+JOS 6:1-20 | La caída de Jericó
+JOS 24:14-28 | Yo y mi casa serviremos a Jehová
+JDG 6:11-24 | El llamado de Gedeón
+JDG 7:1-22 | Gedeón y los trescientos
+RUT 1:1-22 | La fidelidad de Rut
+RUT 4:1-17 | Booz, el pariente redentor
+1SA 1:9-28 | La oración de Ana
+1SA 3:1-21 | Habla, que tu siervo oye
+1SA 16:1-13 | David es ungido
+1SA 17:32-51 | David y Goliat
+2SA 7:1-29 | El pacto davídico
+2SA 12:1-14 | Natán confronta a David
+1KI 3:5-15 | Salomón pide sabiduría
+1KI 8:22-30 | La oración de Salomón
+1KI 18:20-39 | Elías en el monte Carmelo
+1KI 19:1-18 | El silbo apacible
+2KI 5:1-15 | La sanidad de Naamán
+2KI 22:8-20 | El hallazgo del libro de la ley
+2CH 7:11-22 | Si se humillare mi pueblo
+EZR 3:8-13 | Se echan los cimientos del templo
+NEH 1:1-11 | La oración de Nehemías
+NEH 8:1-12 | Esdras lee la ley
+EST 4:1-17 | Para esta hora
+JOB 1:1-22 | La prueba de Job
+JOB 38:1-18 | Dios responde desde el torbellino
+JOB 42:1-17 | Job se arrepiente y es restaurado
+PSA 1:1-6 | Los dos caminos
+PSA 8:1-9 | ¡Cuán glorioso es tu nombre!
+PSA 19:1-14 | La creación y la Palabra
+PSA 22:1-31 | Dios mío, ¿por qué me has desamparado?
+PSA 23:1-6 | El buen pastor
+PSA 27:1-14 | Jehová es mi luz
+PSA 32:1-11 | La dicha del perdón
+PSA 34:1-22 | Gustad y ved
+PSA 37:1-11 | Encomienda a Jehová tu camino
+PSA 40:1-17 | Pacientemente esperé
+PSA 42:1-11 | Como el ciervo
+PSA 46:1-11 | Dios es nuestro amparo
+PSA 51:1-19 | Oración de arrepentimiento
+PSA 62:1-12 | Solo en Dios descansa mi alma
+PSA 63:1-11 | Mi alma tiene sed de ti
+PSA 73:1-28 | Para mí el acercarme a Dios es el bien
+PSA 84:1-12 | Anhelo por la casa de Dios
+PSA 90:1-17 | Enséñanos a contar nuestros días
+PSA 91:1-16 | Bajo la sombra del Omnipotente
+PSA 95:1-11 | Venid, adoremos
+PSA 100:1-5 | Cantad alegres a Dios
+PSA 103:1-22 | Bendice, alma mía, a Jehová
+PSA 119:1-16 | Dichosos los perfectos de camino
+PSA 119:97-112 | Lámpara es a mis pies tu palabra
+PSA 121:1-8 | Mi socorro viene de Jehová
+PSA 139:1-24 | Dios me conoce
+PSA 145:1-21 | Grande es Jehová
+PRO 2:1-22 | El valor de la sabiduría
+PRO 3:1-18 | Fíate de Jehová
+PRO 8:1-36 | La sabiduría clama
+PRO 31:10-31 | La mujer virtuosa
+ECC 3:1-15 | Todo tiene su tiempo
+ECC 12:1-14 | Acuérdate de tu Creador
+SNG 2:1-17 | El amor del Cantar
+ISA 6:1-13 | La visión de Isaías
+ISA 9:1-7 | Un niño nos es nacido
+ISA 40:1-31 | Consolad a mi pueblo
+ISA 43:1-13 | No temas, yo te redimí
+ISA 52:13-53:12 | El Siervo sufriente
+ISA 55:1-13 | Venid a las aguas
+ISA 61:1-11 | El año de la buena voluntad
+JER 1:4-19 | El llamado de Jeremías
+JER 18:1-12 | El alfarero y el barro
+JER 31:31-34 | El nuevo pacto
+LAM 3:19-33 | Nuevas son cada mañana
+EZK 36:22-32 | Un corazón nuevo
+EZK 37:1-14 | El valle de los huesos secos
+DAN 3:13-30 | El horno de fuego
+DAN 6:10-28 | Daniel en el foso de los leones
+DAN 9:1-19 | La oración de Daniel
+HOS 11:1-11 | El amor de Dios por Israel
+JOL 2:12-32 | Convertíos de todo corazón
+AMO 5:14-24 | Corra el juicio como las aguas
+JON 1:1-17 | Jonás huye de Dios
+JON 3:1-4:11 | La misericordia de Dios con Nínive
+MIC 6:1-8 | Lo que Dios pide de ti
+HAB 3:1-19 | Aunque la higuera no florezca
+ZEP 3:14-20 | Se gozará sobre ti con alegría
+MAL 3:1-18 | El mensajero del pacto
+MAT 1:18-25 | El nacimiento de Jesús
+MAT 4:1-11 | La tentación de Jesús
+MAT 5:1-16 | Las bienaventuranzas
+MAT 5:17-48 | Jesús y la ley
+MAT 6:1-18 | La oración y el ayuno
+MAT 6:19-34 | No os afanéis
+MAT 7:1-29 | Las dos casas
+MAT 13:1-23 | La parábola del sembrador
+MAT 14:22-33 | Jesús camina sobre el mar
+MAT 16:13-28 | La confesión de Pedro
+MAT 18:21-35 | El perdón sin límite
+MAT 25:31-46 | El juicio de las naciones
+MAT 26:36-46 | Getsemaní
+MAT 28:1-20 | La resurrección y la Gran Comisión
+MRK 1:1-20 | El comienzo del evangelio
+MRK 2:1-12 | El paralítico perdonado
+MRK 4:35-41 | Jesús calma la tempestad
+MRK 5:21-43 | La fe que toca a Jesús
+MRK 8:27-38 | Tome su cruz
+MRK 10:17-31 | El joven rico
+MRK 10:35-45 | El Hijo del Hombre vino a servir
+MRK 15:21-39 | La crucifixión
+LUK 1:26-56 | El anuncio a María y el Magníficat
+LUK 2:1-20 | Gloria a Dios en las alturas
+LUK 4:14-30 | Jesús en Nazaret
+LUK 10:25-37 | El buen samaritano
+LUK 10:38-42 | Marta y María
+LUK 11:1-13 | Señor, enséñanos a orar
+LUK 12:13-34 | El rico insensato
+LUK 15:1-32 | Lo perdido es hallado
+LUK 18:1-14 | Orar siempre
+LUK 19:1-10 | Zaqueo
+LUK 22:39-46 | Hágase tu voluntad
+LUK 24:13-35 | El camino a Emaús
+JHN 1:1-18 | El Verbo se hizo carne
+JHN 3:1-21 | Os es necesario nacer de nuevo
+JHN 4:1-42 | La mujer samaritana
+JHN 6:25-51 | El pan de vida
+JHN 8:1-12 | La luz del mundo
+JHN 10:1-18 | El buen pastor
+JHN 11:17-44 | La resurrección de Lázaro
+JHN 13:1-17 | Jesús lava los pies
+JHN 14:1-14 | El camino, la verdad y la vida
+JHN 15:1-17 | La vid verdadera
+JHN 17:1-26 | La oración sacerdotal
+JHN 20:1-31 | El Señor resucitado
+JHN 21:15-25 | ¿Me amas?
+ACT 1:1-11 | La ascensión
+ACT 2:1-21 | Pentecostés
+ACT 2:37-47 | La primera iglesia
+ACT 4:1-31 | Valor para hablar la Palabra
+ACT 7:51-60 | El martirio de Esteban
+ACT 9:1-22 | La conversión de Saulo
+ACT 10:34-48 | Dios no hace acepción de personas
+ACT 16:16-34 | El carcelero de Filipos
+ACT 17:16-34 | Pablo en el Areópago
+ACT 20:17-38 | Despedida en Mileto
+ROM 1:16-32 | El evangelio, poder de Dios
+ROM 3:9-31 | Justificados por la fe
+ROM 5:1-11 | Paz para con Dios
+ROM 6:1-23 | Muertos al pecado
+ROM 8:1-17 | Vida en el Espíritu
+ROM 8:18-39 | Más que vencedores
+ROM 10:1-17 | La fe viene por el oír
+ROM 12:1-21 | El sacrificio vivo
+1CO 1:18-31 | La palabra de la cruz
+1CO 12:1-31 | Un cuerpo, muchos miembros
+1CO 13:1-13 | El amor
+1CO 15:1-28 | La resurrección de Cristo
+1CO 15:35-58 | Sorbida es la muerte en victoria
+2CO 4:1-18 | Tesoro en vasos de barro
+2CO 5:11-21 | Nueva criatura y reconciliación
+2CO 12:1-10 | Bástate mi gracia
+GAL 2:15-21 | Con Cristo estoy juntamente crucificado
+GAL 5:13-26 | El fruto del Espíritu
+EPH 1:3-14 | Bendiciones espirituales en Cristo
+EPH 2:1-10 | Salvos por gracia
+EPH 3:14-21 | La oración de Pablo por los efesios
+EPH 4:1-16 | La unidad del cuerpo
+EPH 5:1-21 | Andad como hijos de luz
+EPH 6:10-20 | La armadura de Dios
+PHP 2:1-11 | La humildad de Cristo
+PHP 3:7-21 | Prosigo a la meta
+PHP 4:4-13 | La paz de Dios
+COL 1:9-23 | La preeminencia de Cristo
+COL 3:1-17 | Buscad las cosas de arriba
+1TH 4:13-18 | La venida del Señor
+1TH 5:12-24 | Exhortaciones finales
+1TI 2:1-8 | Oraciones por todos
+2TI 3:10-4:8 | Predica la Palabra
+TIT 2:11-3:7 | La gracia de Dios se ha manifestado
+PHM 1:1-25 | Pablo intercede por Onésimo
+HEB 4:12-16 | El trono de la gracia
+HEB 10:19-25 | Acerquémonos con corazón sincero
+HEB 11:1-16 | Por la fe
+HEB 11:17-40 | Los héroes de la fe
+HEB 12:1-13 | Corramos con paciencia
+JAS 1:2-27 | Pruebas y obediencia
+JAS 2:14-26 | La fe sin obras está muerta
+JAS 3:1-18 | El poder de la lengua
+1PE 1:3-25 | Una esperanza viva
+1PE 2:1-12 | Linaje escogido
+1PE 5:1-11 | Echad toda vuestra ansiedad
+2PE 1:3-21 | Añadid a vuestra fe
+1JN 1:1-2:6 | Andar en luz
+1JN 3:1-24 | Hijos de Dios
+1JN 4:7-21 | Dios es amor
+JUD 1:17-25 | Conservaos en el amor de Dios
+REV 1:9-20 | La visión del Cristo glorificado
+REV 3:14-22 | La carta a Laodicea
+REV 4:1-11 | El trono en el cielo
+REV 5:1-14 | Digno es el Cordero
+REV 21:1-8 | Cielo nuevo y tierra nueva
+REV 22:1-21 | Ven, Señor Jesús
