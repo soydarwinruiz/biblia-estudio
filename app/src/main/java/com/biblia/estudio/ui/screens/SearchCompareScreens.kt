@@ -12,6 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.StopCircle
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -127,16 +129,23 @@ fun CompareScreen(nav: NavController, settings: AppSettings, book: Int, chapter:
 }
 
 @Composable
-fun PrayerScreen(nav: NavController, settings: AppSettings) {
+fun PrayerScreen(nav: NavController, settings: AppSettings, dayOffset: Int = 0) {
     val ctx = LocalContext.current; val c = ctx.app; val scope = rememberCoroutineScope()
-    var offset by remember { mutableIntStateOf(0) }
+    var offset by remember { mutableIntStateOf(dayOffset) }
+    val speaking by c.speaker.speaking.collectAsState()
+    DisposableEffect(Unit) { onDispose { if (c.speaker.speaking.value == "prayer") c.speaker.stop() } }
     val day = com.biblia.estudio.data.user.today()
     val prayer by produceState<com.biblia.estudio.data.content.Prayer?>(null, offset) { value = c.content.prayerOfDay(day + offset) }
     val scripture by produceState("", prayer, settings.version) { prayer?.let { value = c.content.passage(settings.version, it.ref).joinToString(" ") { v -> "${v.label} ${v.text}" } } }
     Scaffold(topBar = { BackTopBar(if (offset == 0) "Oración del día" else "Oración", { nav.popBackStack() }) }) { pad ->
         val p = prayer ?: return@Scaffold
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text(p.title, style = MaterialTheme.typography.headlineSmall)
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(p.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                IconButton(onClick = { c.speaker.toggle("prayer", listOf(p.title, scripture.replace(Regex("\\b\\d+ "), ""), p.text)) }) {
+                    Icon(if (speaking == "prayer") Icons.Filled.StopCircle else Icons.Filled.VolumeUp, "Escuchar")
+                }
+            }
             Spacer(Modifier.height(12.dp))
             Text("Ora con la Escritura · ${c.content.label(p.ref)}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Text(scripture, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Serif), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
@@ -148,6 +157,7 @@ fun PrayerScreen(nav: NavController, settings: AppSettings) {
             Spacer(Modifier.height(20.dp))
             Row {
                 if (offset == 0) Button(onClick = { scope.launch { c.user.markDevotional("prayer"); nav.popBackStack() } }) { Text("Amén · Completar") }
+                else Button(onClick = { nav.popBackStack() }) { Text("Amén") }
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { offset++ }) { Text("Otra oración") }
             }

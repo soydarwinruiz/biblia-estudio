@@ -110,6 +110,19 @@ interface UserDao {
     @Upsert suspend fun upsertStudy(s: Study)
     @Query("DELETE FROM studies WHERE id=:id") suspend fun deleteStudy(id: Long)
 
+    // Reflexiones de lecciones
+    @Query("SELECT * FROM lesson_reflections WHERE lessonId=:id") fun reflection(id: Int): Flow<LessonReflection?>
+    @Upsert suspend fun upsertReflection(r: LessonReflection)
+    @Query("DELETE FROM lesson_reflections WHERE lessonId=:id") suspend fun deleteReflection(id: Int)
+
+    // Memorización
+    @Query("SELECT * FROM memory_verses ORDER BY box, created") fun memoryVerses(): Flow<List<MemoryVerse>>
+    @Query("SELECT * FROM memory_verses WHERE nextReview<=:day ORDER BY box, nextReview") suspend fun dueMemory(day: Long): List<MemoryVerse>
+    @Query("SELECT COUNT(*) FROM memory_verses WHERE nextReview<=:day") fun dueMemoryCount(day: Long): Flow<Int>
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun addMemory(m: MemoryVerse): Long
+    @Upsert suspend fun upsertMemory(m: MemoryVerse)
+    @Query("DELETE FROM memory_verses WHERE id=:id") suspend fun deleteMemory(id: Long)
+
     // Respaldo
     @Query("SELECT * FROM highlights") suspend fun dumpHighlights(): List<Highlight>
     @Query("SELECT * FROM verse_notes") suspend fun dumpNotes(): List<VerseNote>
@@ -125,6 +138,8 @@ interface UserDao {
     @Query("SELECT * FROM quiz_days") suspend fun dumpQuizDays(): List<QuizDay>
     @Query("SELECT * FROM devotional_done") suspend fun dumpDevotional(): List<DevotionalDone>
     @Query("SELECT * FROM studies") suspend fun dumpStudies(): List<Study>
+    @Query("SELECT * FROM lesson_reflections") suspend fun dumpReflections(): List<LessonReflection>
+    @Query("SELECT * FROM memory_verses") suspend fun dumpMemory(): List<MemoryVerse>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insHighlights(x: List<Highlight>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insNotes(x: List<VerseNote>)
@@ -140,4 +155,6 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insQuizDays(x: List<QuizDay>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insDevotional(x: List<DevotionalDone>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insStudies(x: List<Study>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insReflections(x: List<LessonReflection>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insMemory(x: List<MemoryVerse>)
 }

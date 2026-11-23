@@ -12,6 +12,7 @@ object Points {
     const val QUIZ_PERFECT_BONUS = 20
     const val PLAN_DAY = 20
     const val STUDY = 15
+    const val MEMORY = 5
 }
 
 fun today(): Long = LocalDate.now().toEpochDay()
@@ -22,7 +23,8 @@ data class Backup(
     val highlights: List<Highlight>, val notes: List<VerseNote>, val bookmarks: List<Bookmark>,
     val topics: List<UserTopic>, val topicVerses: List<TopicVerse>, val tags: List<Tag>, val tagVerses: List<TagVerse>,
     val chaptersRead: List<ChapterRead>, val enrollments: List<PlanEnrollment>, val planDays: List<PlanDayDone>,
-    val activity: List<ActivityDay>, val quizDays: List<QuizDay>, val devotional: List<DevotionalDone>, val studies: List<Study>
+    val activity: List<ActivityDay>, val quizDays: List<QuizDay>, val devotional: List<DevotionalDone>, val studies: List<Study>,
+    val reflections: List<LessonReflection> = emptyList(), val memory: List<MemoryVerse> = emptyList()
 )
 
 class UserRepository(private val db: UserDatabase) {
@@ -85,11 +87,25 @@ class UserRepository(private val db: UserDatabase) {
 
     suspend fun deleteTag(id: Long) = db.withTransaction { dao.deleteTagVerses(id); dao.deleteTag(id) }
 
+    /** Intervalos (días) de cada caja del sistema Leitner. */
+    private val memoryIntervals = listOf(1, 2, 4, 7, 15, 30, 60)
+
+    suspend fun addMemory(book: Int, chapter: Int, verse: Int, verseEnd: Int) =
+        dao.addMemory(MemoryVerse(book = book, chapter = chapter, verse = verse, verseEnd = verseEnd, nextReview = today()))
+
+    /** Registra un repaso: si lo sabía sube de caja; si no, vuelve a la primera. */
+    suspend fun reviewMemory(m: MemoryVerse, knew: Boolean) {
+        val box = if (knew) (m.box + 1).coerceAtMost(memoryIntervals.lastIndex) else 0
+        dao.upsertMemory(m.copy(box = box, nextReview = today() + memoryIntervals[box], reviews = m.reviews + 1))
+        if (knew) addPoints(Points.MEMORY)
+    }
+
     suspend fun exportJson(): String = json.encodeToString(Backup.serializer(), Backup(
         highlights = dao.dumpHighlights(), notes = dao.dumpNotes(), bookmarks = dao.dumpBookmarks(),
         topics = dao.dumpTopics(), topicVerses = dao.dumpTopicVerses(), tags = dao.dumpTags(), tagVerses = dao.dumpTagVerses(),
         chaptersRead = dao.dumpChaptersRead(), enrollments = dao.dumpEnrollments(), planDays = dao.dumpPlanDays(),
-        activity = dao.dumpActivity(), quizDays = dao.dumpQuizDays(), devotional = dao.dumpDevotional(), studies = dao.dumpStudies()
+        activity = dao.dumpActivity(), quizDays = dao.dumpQuizDays(), devotional = dao.dumpDevotional(), studies = dao.dumpStudies(),
+        reflections = dao.dumpReflections(), memory = dao.dumpMemory()
     ))
 
     /** Restaura un respaldo reemplazando todos los datos personales. */
@@ -101,6 +117,7 @@ class UserRepository(private val db: UserDatabase) {
             dao.insTopics(b.topics); dao.insTopicVerses(b.topicVerses); dao.insTags(b.tags); dao.insTagVerses(b.tagVerses)
             dao.insChaptersRead(b.chaptersRead); dao.insEnrollments(b.enrollments); dao.insPlanDays(b.planDays)
             dao.insActivity(b.activity); dao.insQuizDays(b.quizDays); dao.insDevotional(b.devotional); dao.insStudies(b.studies)
+            dao.insReflections(b.reflections); dao.insMemory(b.memory)
         }
         return b.highlights.size + b.notes.size + b.topicVerses.size + b.studies.size
     }

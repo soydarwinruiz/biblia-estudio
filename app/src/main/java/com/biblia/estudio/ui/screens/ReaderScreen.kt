@@ -31,6 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
@@ -90,6 +92,11 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
     var sheet by remember { mutableStateOf<String?>(null) }   // notes | note | topic | tag
     var previewRef by remember { mutableStateOf<PassageRef?>(null) }
     val listState = rememberLazyListState()
+    val speakKey = "cap:$book:$chapter:${settings.version}"
+    val speakingKey by c.speaker.speaking.collectAsState()
+    val speakingIdx by c.speaker.current.collectAsState()
+    val isSpeaking = speakingKey == speakKey
+    DisposableEffect(book, chapter) { onDispose { if (c.speaker.speaking.value?.startsWith("cap:") == true) c.speaker.stop() } }
 
     fun go(b: Int, ch: Int) { book = b; chapter = ch; target = null; selection = emptySet(); scope.launch { listState.scrollToItem(0) } }
     fun next() { if (chapter < bk.chapters) go(book, chapter + 1) else if (book < 66) go(book + 1, 1) }
@@ -100,6 +107,13 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
         val d = data ?: return@remember emptyList<Any>()
         val byVerse = d.headings.groupBy { it.beforeVerse }
         buildList { d.verses.forEach { v -> byVerse[v.verse]?.forEach { add(it) }; add(v) } }
+    }
+    LaunchedEffect(speakingIdx) {
+        if (isSpeaking && speakingIdx > 0) {
+            val v = data?.verses?.getOrNull(speakingIdx - 1)
+            val idx = items.indexOfFirst { it === v }
+            if (idx >= 0) listState.animateScrollToItem((idx).coerceAtLeast(0))
+        }
     }
     LaunchedEffect(items, target) {
         val t = target ?: return@LaunchedEffect
@@ -136,6 +150,10 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                             }
                         }
                     }
+                    IconButton(onClick = {
+                        val vs = data?.verses.orEmpty()
+                        c.speaker.toggle(speakKey, listOf("${bk.name}, capítulo $chapter.") + vs.map { it.text })
+                    }) { Icon(if (isSpeaking) Icons.Filled.StopCircle else Icons.Filled.VolumeUp, if (isSpeaking) "Detener lectura" else "Escuchar capítulo") }
                     IconButton(onClick = { nav.navigate("search") }) { Icon(Icons.Filled.Search, "Buscar") }
                     IconButton(onClick = { nav.navigate("commentary/$book/$chapter") }) { Icon(Icons.AutoMirrored.Filled.Notes, "Notas de estudio del capítulo") }
                 }
@@ -155,6 +173,11 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                         "tag" -> sheet = "tag"
                         "compare" -> nav.navigate("compare/$book/$chapter/${sorted.first()}")
                         "study" -> nav.newStudy(ref)
+                        "memory" -> scope.launch {
+                            val r = c.user.addMemory(book, chapter, sorted.first(), sorted.last())
+                            Toast.makeText(ctx, if (r == -1L) "Ya está en tu lista de memorización" else "Añadido a Memorizar", Toast.LENGTH_SHORT).show()
+                            selection = emptySet()
+                        }
                         "copy", "share" -> {
                             val txt = data?.verses?.filter { it.verse in selection }?.joinToString(" ") { "${it.verse} ${it.text}" } ?: ""
                             val full = "«$txt» — ${c.content.label(ref)} (${settings.version})"
@@ -177,7 +200,15 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
     ) { pad ->
         val d = data
         if (d == null) { Box(Modifier.padding(pad).fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }; return@Scaffold }
-        LazyColumn(state = listState, modifier = Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp)) {
+        var dragX by remember { mutableFloatStateOf(0f) }
+        LazyColumn(state = listState, modifier = Modifier.padding(pad).fillMaxSize().pointerInput(book, chapter) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragX = 0f },
+                    onDragEnd = { if (dragX < -180f) next() else if (dragX > 180f) prev(); dragX = 0f },
+                    onDragCancel = { dragX = 0f },
+                    onHorizontalDrag = { _, dx -> dragX += dx }
+                )
+            }, contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp)) {
             item {
                 Text("${bk.name} $chapter", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), textAlign = TextAlign.Center)
                 if (chapter == 1) TextButton(onClick = { nav.navigate("intro/$book") }, modifier = Modifier.fillMaxWidth()) {
@@ -193,6 +224,7 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                     is Verse -> VerseRow(
                         v = it, settings = settings, parallel = d.parallel[it.verse],
                         highlight = hl[it.verse], selected = it.verse in selection,
+                        speaking = isSpeaking && speakingIdx - 1 == d.verses.indexOf(it),
                         targeted = target?.let { t -> it.verse in t.first..t.second } == true,
                         hasStudyNote = settings.showNoteMarkers && it.verse in d.noteVerses,
                         hasNote = noteMap.containsKey(it.verse), bookmarked = it.verse in bmSet, tagged = it.verse in taggedSet,
@@ -234,11 +266,12 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
 
 @Composable
 private fun VerseRow(
-    v: Verse, settings: AppSettings, parallel: String?, highlight: Int?, selected: Boolean, targeted: Boolean,
+    v: Verse, settings: AppSettings, parallel: String?, highlight: Int?, selected: Boolean, targeted: Boolean, speaking: Boolean,
     hasStudyNote: Boolean, hasNote: Boolean, bookmarked: Boolean, tagged: Boolean, onClick: () -> Unit, onStudyNote: () -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val bg = when {
+        speaking -> MaterialTheme.colorScheme.tertiaryContainer
         highlight != null -> Color(highlight).copy(alpha = 0.45f)
         targeted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         else -> Color.Transparent
@@ -283,6 +316,7 @@ private fun SelectionBar(count: Int, onColor: (Int?) -> Unit, onAction: (String)
                 A(Icons.AutoMirrored.Filled.Label, "Etiqueta", "tag")
                 A(Icons.Filled.CompareArrows, "Comparar", "compare")
                 A(Icons.Filled.School, "Estudiar", "study")
+                A(Icons.Filled.Psychology, "Memorizar", "memory")
                 A(Icons.Filled.Bookmark, "Marcador", "bookmark")
                 A(Icons.Filled.ContentCopy, "Copiar", "copy")
                 A(Icons.Filled.Share, "Compartir", "share")

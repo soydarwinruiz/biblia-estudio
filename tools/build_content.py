@@ -167,6 +167,8 @@ for i, bk in enumerate(BOOKS):
         nxt = BOOKS[b][1]
         pool = [x[1] for x in BOOKS if x[1] not in (nxt, bk[1])]
         addq(f"¿Qué libro viene inmediatamente después de {bk[1]}?", nxt, random.sample(pool, 3), f"{nxt}", "Orden de los libros", 2)
+WRE = r"\b[A-Za-zÁÉÍÓÚÑáéíóúñ]{5,}\b"
+WORDPOOL = sorted({x for r in vod for x in re.findall(WRE, text_of(*r))})
 STOP = set("porque cuando entonces también delante contra sobre todos todas aquellos aquel estos estas para entre desde hasta como pero sino".split())
 for (b, c, v, ce, ve) in vod:
     t = text_of(b, c, v, ce, ve); label = ref_label(b, c, v, ce, ve)
@@ -178,12 +180,11 @@ for (b, c, v, ce, ve) in vod:
         w = random.choice(words)
         blank = re.sub(r"\b" + re.escape(w) + r"\b", "_____", t, count=1)
         WRE = r"\b[A-Za-zÁÉÍÓÚÑáéíóúñ]{6,}\b"
-        others = list({x for x in re.findall(WRE, text_of(*random.choice(vod))) if x.lower() != w.lower() and x.lower() not in STOP})
-        tries = 0
-        while len(others) < 3 and tries < 10:
-            others += [x for x in re.findall(WRE, text_of(*random.choice(vod))) if x.lower() != w.lower() and x not in others and x.lower() not in STOP]; tries += 1
-        wr = random.sample(others, 3)
-        wr = [x[0].upper() + x[1:] if w[0].isupper() else (x if x in ("Jehová", "Dios", "Señor", "Cristo", "Jesús", "Espíritu") or x[1:].islower() and x[0].isupper() and False else x.lower() if x.lower() not in ("jehová", "dios", "señor", "cristo", "jesús", "espíritu", "israel", "jerusalén") else x) for x in wr]
+        cands = [x for x in WORDPOOL if x.lower() != w.lower() and abs(len(x) - len(w)) <= 2 and x.lower() not in STOP]
+        same_case = [x for x in cands if x[0].isupper() == w[0].isupper()]
+        pool = same_case if len(same_case) >= 3 else cands
+        wr = random.sample(pool, 3)
+        wr = [x[0].upper() + x[1:] if w[0].isupper() else (x if x.lower() in ("jehová", "dios", "señor", "cristo", "jesús", "espíritu", "israel", "jerusalén") else x.lower()) for x in wr]
         addq(f"Completa el versículo ({label}):\n«{blank}»", w, wr, label, "Completa el versículo", 1 if len(t) < 120 else 2)
 con.executemany("INSERT INTO quiz(question,options,answer,ref,category,difficulty) VALUES(?,?,?,?,?,?)", quiz)
 

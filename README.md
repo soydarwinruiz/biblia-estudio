@@ -29,10 +29,18 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Mis temas**: temas creados por ti (con color y descripción) para agrupar versículos, etiquetas, y listas de resaltados, notas y marcadores.
 - **Progreso**: porcentaje leído (Biblia, AT, NT y por libro), planes de lectura con calendario, 20 logros, niveles y rachas.
 - **Preguntas**: 5 diarias (deterministas por fecha) y práctica libre por categoría.
+- **Lectura en voz alta** del capítulo, el versículo del día, la oración y las lecciones (voz del teléfono, sin Internet).
+- **Memorizar**: versículos con repaso espaciado (1, 2, 4, 7, 15, 30 y 60 días), pistas con la primera letra de cada palabra y puntos.
+- **Widget** de pantalla de inicio con el versículo del día.
+- **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
 ## Instalar el APK
-Descarga [`apk/biblia-estudio-1.1-debug.apk`](apk/biblia-estudio-1.1-debug.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/biblia-estudio-1.2.apk`](apk/biblia-estudio-1.2.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+
+## Firma
+El APK se firma con `keystore/biblia-release.jks` (contraseñas en `app/build.gradle.kts`). Usa siempre esta misma clave
+para que las actualizaciones se instalen sobre la versión anterior sin perder datos. Mantén el repositorio privado.
 
 ## Compilar
 Requisitos: JDK 17+, Android SDK (plataforma 35) y Gradle 8.9 o superior.

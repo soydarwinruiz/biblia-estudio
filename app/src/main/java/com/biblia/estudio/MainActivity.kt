@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
                 try {
                     c.init { p -> progress = p }
                     ready = true
+                    runCatching { com.biblia.estudio.work.VerseWidget.refreshAll(applicationContext) }
                 } catch (e: Exception) { error = e.message ?: e.toString() }
                 // El recordatorio es secundario: si falla, la app sigue funcionando.
                 runCatching {

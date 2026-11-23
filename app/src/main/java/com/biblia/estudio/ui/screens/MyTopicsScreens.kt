@@ -63,8 +63,11 @@ fun MyTopicsScreen(nav: NavController, settings: AppSettings) {
     var editTopic by remember { mutableStateOf<UserTopic?>(null) }
     var newTag by remember { mutableStateOf(false) }
     var colorFilter by remember { mutableStateOf<Int?>(null) }
+    val memoryCount by c.user.dao.memoryVerses().collectAsState(initial = emptyList())
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Mis temas") }) },
+        topBar = { TopAppBar(title = { Text("Mis temas") }, actions = {
+            TextButton(onClick = { nav.navigate("memory") }) { Icon(Icons.Filled.Psychology, null); Text(" Memorizar (${memoryCount.size})") }
+        }) },
         floatingActionButton = {
             when (tab) {
                 0 -> ExtendedFloatingActionButton(onClick = { editTopic = UserTopic(name = "", color = TopicColors[topics.size % TopicColors.size]) }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Tema") })

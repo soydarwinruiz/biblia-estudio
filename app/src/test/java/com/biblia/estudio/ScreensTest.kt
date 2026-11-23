@@ -92,4 +92,36 @@ class ScreensTest {
         rule.onNodeWithText("Homilética").performClick()
         shot("12_homiletica")
     }
+
+    private val container get() = rule.activity.app
+
+    @Test fun darkModeMemoryAndLesson() {
+        waitText("Leer pasaje")
+        kotlinx.coroutines.runBlocking {
+            container.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.DARK) }
+            container.user.addMemory(19, 23, 1, 1)
+        }
+        waitText("Repasar")
+        shot("13_hoy_oscuro")
+        rule.onNodeWithText("Repasar").performClick()
+        waitText("Repasar ahora (1)")
+        rule.onNodeWithText("Repasar ahora (1)").performClick()
+        waitText("Pista")
+        rule.onNodeWithText("Pista").performClick()
+        shot("14_memorizar")
+        rule.onNodeWithText("Mostrar").performClick()
+        rule.onNodeWithText("¡Lo sé!").performClick()
+        waitText("Repaso terminado")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitText("Estudiar lección")
+        rule.onNodeWithText("Estudiar lección").performScrollTo().performClick()
+        waitText("Mi reflexión")
+        rule.onNodeWithText("Mi reflexión").performScrollTo()
+        shot("15_leccion_reflexion")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithText("Biblia").performClick()
+        waitText("El Verbo hecho carne")
+        shot("16_lector_oscuro")
+    }
 }
