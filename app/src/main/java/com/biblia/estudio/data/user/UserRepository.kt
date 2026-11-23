@@ -24,7 +24,8 @@ data class Backup(
     val topics: List<UserTopic>, val topicVerses: List<TopicVerse>, val tags: List<Tag>, val tagVerses: List<TagVerse>,
     val chaptersRead: List<ChapterRead>, val enrollments: List<PlanEnrollment>, val planDays: List<PlanDayDone>,
     val activity: List<ActivityDay>, val quizDays: List<QuizDay>, val devotional: List<DevotionalDone>, val studies: List<Study>,
-    val reflections: List<LessonReflection> = emptyList(), val memory: List<MemoryVerse> = emptyList()
+    val reflections: List<LessonReflection> = emptyList(), val memory: List<MemoryVerse> = emptyList(),
+    val wordHighlights: List<WordHighlight> = emptyList()
 )
 
 class UserRepository(private val db: UserDatabase) {
@@ -100,12 +101,18 @@ class UserRepository(private val db: UserDatabase) {
         if (knew) addPoints(Points.MEMORY)
     }
 
+    /** Reemplaza los resaltados de palabras de un versículo. ranges = pares (inicio, fin) de índices de palabra con su color. */
+    suspend fun setWordHighlights(version: String, book: Int, chapter: Int, verse: Int, ranges: List<Triple<Int, Int, Int>>) = db.withTransaction {
+        dao.clearWordHighlights(version, book, chapter, verse)
+        ranges.forEach { (s, e, col) -> dao.insertWordHighlight(WordHighlight(version = version, book = book, chapter = chapter, verse = verse, wordStart = s, wordEnd = e, color = col)) }
+    }
+
     suspend fun exportJson(): String = json.encodeToString(Backup.serializer(), Backup(
         highlights = dao.dumpHighlights(), notes = dao.dumpNotes(), bookmarks = dao.dumpBookmarks(),
         topics = dao.dumpTopics(), topicVerses = dao.dumpTopicVerses(), tags = dao.dumpTags(), tagVerses = dao.dumpTagVerses(),
         chaptersRead = dao.dumpChaptersRead(), enrollments = dao.dumpEnrollments(), planDays = dao.dumpPlanDays(),
         activity = dao.dumpActivity(), quizDays = dao.dumpQuizDays(), devotional = dao.dumpDevotional(), studies = dao.dumpStudies(),
-        reflections = dao.dumpReflections(), memory = dao.dumpMemory()
+        reflections = dao.dumpReflections(), memory = dao.dumpMemory(), wordHighlights = dao.dumpWordHighlights()
     ))
 
     /** Restaura un respaldo reemplazando todos los datos personales. */
@@ -117,7 +124,7 @@ class UserRepository(private val db: UserDatabase) {
             dao.insTopics(b.topics); dao.insTopicVerses(b.topicVerses); dao.insTags(b.tags); dao.insTagVerses(b.tagVerses)
             dao.insChaptersRead(b.chaptersRead); dao.insEnrollments(b.enrollments); dao.insPlanDays(b.planDays)
             dao.insActivity(b.activity); dao.insQuizDays(b.quizDays); dao.insDevotional(b.devotional); dao.insStudies(b.studies)
-            dao.insReflections(b.reflections); dao.insMemory(b.memory)
+            dao.insReflections(b.reflections); dao.insMemory(b.memory); dao.insWordHighlights(b.wordHighlights)
         }
         return b.highlights.size + b.notes.size + b.topicVerses.size + b.studies.size
     }

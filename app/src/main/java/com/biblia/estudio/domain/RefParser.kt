@@ -16,7 +16,7 @@ class RefParser(abbreviations: Map<String, Int>) {
         .joinToString("|") { a -> a.replace(Regex("[^\\p{L}\\d ]"), "").replace(" ", "\\s?") }
 
     private val cv = "(\\d{1,3})[:.](\\d{1,3})(?:\\s?[–-]\\s?(\\d{1,3})(?:[:.](\\d{1,3}))?)?"
-    private val bookRef = Regex("(?<![\\p{L}\\d])($bookPattern)\\.?\\s?(\\d{1,3})(?:[:.](\\d{1,3})(?:\\s?[–-]\\s?(\\d{1,3})(?:[:.](\\d{1,3}))?)?)?", RegexOption.IGNORE_CASE)
+    private val bookRef = Regex("(?<![\\p{L}\\d])($bookPattern)\\.?\\s?(\\d{1,3})(?:[:.](\\d{1,3}))?(?:\\s?[–-]\\s?(\\d{1,3})(?:[:.](\\d{1,3}))?)?", RegexOption.IGNORE_CASE)
     private val bareRef = Regex("(?<![\\p{L}\\d:.])$cv")
     private val versesRef = Regex("\\bvv?\\.\\s?(\\d{1,3})(?:\\s?[–-]\\s?(\\d{1,3}))?")
     private val continuation = Regex("^\\s*[;,]\\s*$cv")
@@ -24,7 +24,14 @@ class RefParser(abbreviations: Map<String, Int>) {
 
     private fun norm(s: String) = s.lowercase().replace(".", "").trim()
 
+    /** Abdías, Filemón, 2 Juan, 3 Juan y Judas tienen un solo capítulo: «Jud. 14» es el versículo 14. */
+    private val singleChapter = setOf(31, 57, 63, 64, 65)
+
     private fun mk(book: Int, c: Int, v: Int?, a: String?, b: String?): PassageRef {
+        if (book in singleChapter && v == null) {
+            val end = a?.toIntOrNull() ?: c
+            return PassageRef(book, 1, c, 1, end)
+        }
         val verse = v ?: 0
         return when {
             a != null && b != null -> PassageRef(book, c, verse, a.toInt(), b.toInt())

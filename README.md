@@ -10,12 +10,13 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 | Notas versículo a versículo | ~17.000 | Biblia de Estudio MacArthur |
 | Introducciones por libro | 66 libros: título, autor y fecha, contexto histórico, temas, retos de interpretación, bosquejo | MacArthur |
 | Artículos | Cómo obtuvimos la Biblia, Cómo estudiar la Biblia, Pentateuco, Profetas, Período intertestamentario, Evangelios, Fe salvadora, Estudio panorámico de teología | MacArthur |
+| Diccionario bíblico | 280 entradas: personas, lugares, términos, objetos, fiestas, grupos y nombres de Dios | redactado para la app |
 | Índice temático | 613 temas, 23.000 entradas con referencias tocables | MacArthur |
 | Referencias cruzadas | ~3.100 | RVR1960 |
 | Guías de método | Inductivo, exégesis, hermenéutica, géneros literarios, contexto, homilética, devocional | propias |
 | Versículos del día | 419 | selección propia |
 | Pasajes del día | 224 | selección propia |
-| Oraciones del día | 62 | propias |
+| Oraciones del día | 365 (una distinta cada día del año) | propias |
 | Lecciones del día | 299 (panorama libro por libro + doctrina + método) | MacArthur + guías |
 | Preguntas | 1.259 (179 escritas a mano + generadas: ¿dónde dice?, completa el versículo, autores, libros) | propias |
 | Planes de lectura | 9 (Biblia en un año, AT+NT+Salmos, NT en 90 días, Evangelios, Salmos, Proverbios, Pablo, Pentateuco, Profetas) | generados |
@@ -31,12 +32,15 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Preguntas**: 5 diarias (deterministas por fecha) y práctica libre por categoría.
 - **Lectura en voz alta** del capítulo, el versículo del día, la oración y las lecciones (voz del teléfono, sin Internet).
 - **Memorizar**: versículos con repaso espaciado (1, 2, 4, 7, 15, 30 y 60 días), pistas con la primera letra de cada palabra y puntos.
+- **Palabras resaltadas**: marca palabras sueltas de un versículo en 6 colores y búscalas en el diccionario.
+- **Lectura continua**: los capítulos se encadenan al desplazarse (menú de versión → Lectura continua).
+- **Selector libro → capítulo → versículo** en el lector.
 - **Widget** de pantalla de inicio con el versículo del día.
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
 ## Instalar el APK
-Descarga [`apk/codice-vivo-1.3.apk`](apk/codice-vivo-1.3.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/codice-vivo-1.4.apk`](apk/codice-vivo-1.4.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
 
 ## Firma
 El APK se firma con `keystore/biblia-release.jks` (contraseñas en `app/build.gradle.kts`). Usa siempre esta misma clave

@@ -123,6 +123,16 @@ interface UserDao {
     @Upsert suspend fun upsertMemory(m: MemoryVerse)
     @Query("DELETE FROM memory_verses WHERE id=:id") suspend fun deleteMemory(id: Long)
 
+    // Palabras resaltadas
+    @Query("SELECT * FROM word_highlights WHERE version=:version") fun wordHighlights(version: String): Flow<List<WordHighlight>>
+    @Query("SELECT * FROM word_highlights WHERE version=:version AND book=:book AND chapter=:chapter AND verse=:verse")
+    suspend fun wordHighlightsOf(version: String, book: Int, chapter: Int, verse: Int): List<WordHighlight>
+    @Insert suspend fun insertWordHighlight(w: WordHighlight): Long
+    @Query("DELETE FROM word_highlights WHERE version=:version AND book=:book AND chapter=:chapter AND verse=:verse")
+    suspend fun clearWordHighlights(version: String, book: Int, chapter: Int, verse: Int)
+    @Query("SELECT DISTINCT book*1000000+chapter*1000+verse FROM tag_verses UNION SELECT DISTINCT book*1000000+chapter*1000+verse FROM topic_verses")
+    fun allTaggedKeys(): Flow<List<Long>>
+
     // Respaldo
     @Query("SELECT * FROM highlights") suspend fun dumpHighlights(): List<Highlight>
     @Query("SELECT * FROM verse_notes") suspend fun dumpNotes(): List<VerseNote>
@@ -140,6 +150,7 @@ interface UserDao {
     @Query("SELECT * FROM studies") suspend fun dumpStudies(): List<Study>
     @Query("SELECT * FROM lesson_reflections") suspend fun dumpReflections(): List<LessonReflection>
     @Query("SELECT * FROM memory_verses") suspend fun dumpMemory(): List<MemoryVerse>
+    @Query("SELECT * FROM word_highlights") suspend fun dumpWordHighlights(): List<WordHighlight>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insHighlights(x: List<Highlight>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insNotes(x: List<VerseNote>)
@@ -157,4 +168,5 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insStudies(x: List<Study>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insReflections(x: List<LessonReflection>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insMemory(x: List<MemoryVerse>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insWordHighlights(x: List<WordHighlight>)
 }

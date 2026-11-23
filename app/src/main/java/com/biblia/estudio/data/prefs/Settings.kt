@@ -32,6 +32,7 @@ data class AppSettings(
     val lastBook: Int = 43,
     val lastChapter: Int = 1,
     val compareVersions: String = "",
+    val continuous: Boolean = false,
 )
 
 class SettingsRepository(private val context: Context) {
@@ -51,6 +52,7 @@ class SettingsRepository(private val context: Context) {
         val lastBook = intPreferencesKey("last_book")
         val lastChapter = intPreferencesKey("last_chapter")
         val compareVersions = stringPreferencesKey("compare_versions")
+        val continuous = booleanPreferencesKey("continuous")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p -> p.toSettings() }
@@ -71,6 +73,7 @@ class SettingsRepository(private val context: Context) {
         lastBook = this[K.lastBook] ?: 43,
         lastChapter = this[K.lastChapter] ?: 1,
         compareVersions = this[K.compareVersions] ?: "",
+        continuous = this[K.continuous] ?: false,
     )
 
     suspend fun current(): AppSettings = settings.first()
@@ -82,7 +85,7 @@ class SettingsRepository(private val context: Context) {
             p[K.fontSize] = s.fontSize; p[K.lineHeight] = s.lineHeight; p[K.theme] = s.theme.name
             p[K.showHeadings] = s.showHeadings; p[K.showVerseNumbers] = s.showVerseNumbers; p[K.showNoteMarkers] = s.showNoteMarkers
             p[K.notifications] = s.notifications; p[K.notifyHour] = s.notifyHour; p[K.notifyMinute] = s.notifyMinute
-            p[K.lastBook] = s.lastBook; p[K.lastChapter] = s.lastChapter; p[K.compareVersions] = s.compareVersions
+            p[K.lastBook] = s.lastBook; p[K.lastChapter] = s.lastChapter; p[K.compareVersions] = s.compareVersions; p[K.continuous] = s.continuous
         }
     }
 }

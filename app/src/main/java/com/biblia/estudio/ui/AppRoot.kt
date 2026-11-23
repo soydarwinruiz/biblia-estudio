@@ -13,6 +13,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,6 +38,9 @@ private val tabs = listOf(
     Tab("mine", "Mis temas", Icons.Filled.Bookmarks),
     Tab("progress", "Progreso", Icons.Filled.BarChart),
 )
+
+/** Ajustes actuales, accesibles desde cualquier pantalla y siempre al día. */
+val LocalSettings = compositionLocalOf { AppSettings() }
 
 fun NavController.openRef(ref: PassageRef) =
     navigate("reader?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ve=${if (ref.chapterEnd == ref.chapter) ref.verseEnd else 999}") { launchSingleTop = true }
@@ -67,8 +72,9 @@ fun AppRoot(settings: AppSettings) {
             }
         }
     ) { pad ->
+        CompositionLocalProvider(LocalSettings provides settings) {
         NavHost(nav, startDestination = "today", modifier = Modifier.padding(bottom = if (showBar) pad.calculateBottomPadding() else androidx.compose.ui.unit.Dp(0f))) {
-            composable("today") { TodayScreen(nav, settings) }
+            composable("today") { TodayScreen(nav, LocalSettings.current) }
             composable(
                 "reader?b={b}&c={c}&v={v}&ve={ve}",
                 arguments = listOf(
@@ -79,19 +85,21 @@ fun AppRoot(settings: AppSettings) {
                 )
             ) { e ->
                 val a = e.arguments!!
-                ReaderScreen(nav, settings, a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ve"))
+                ReaderScreen(nav, LocalSettings.current, a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ve"))
             }
-            composable("search") { SearchScreen(nav, settings) }
+            composable("search?q={q}", arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })) { e -> SearchScreen(nav, LocalSettings.current, e.arguments!!.getString("q") ?: "") }
+            composable("dictionary?q={q}", arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })) { e -> DictionaryScreen(nav, e.arguments!!.getString("q") ?: "") }
+            composable("dict/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> DictionaryEntryScreen(nav, LocalSettings.current, e.arguments!!.getInt("id")) }
             composable("compare/{b}/{c}/{v}", arguments = listOf(navArgument("b") { type = NavType.IntType }, navArgument("c") { type = NavType.IntType }, navArgument("v") { type = NavType.IntType })) { e ->
-                val a = e.arguments!!; CompareScreen(nav, settings, a.getInt("b"), a.getInt("c"), a.getInt("v"))
+                val a = e.arguments!!; CompareScreen(nav, LocalSettings.current, a.getInt("b"), a.getInt("c"), a.getInt("v"))
             }
             composable("study") { StudyHubScreen(nav) }
-            composable("intro/{b}", arguments = listOf(navArgument("b") { type = NavType.IntType })) { e -> IntroScreen(nav, settings, e.arguments!!.getInt("b")) }
+            composable("intro/{b}", arguments = listOf(navArgument("b") { type = NavType.IntType })) { e -> IntroScreen(nav, LocalSettings.current, e.arguments!!.getInt("b")) }
             composable("commentary/{b}/{c}", arguments = listOf(navArgument("b") { type = NavType.IntType }, navArgument("c") { type = NavType.IntType })) { e ->
-                CommentaryScreen(nav, settings, e.arguments!!.getInt("b"), e.arguments!!.getInt("c"))
+                CommentaryScreen(nav, LocalSettings.current, e.arguments!!.getInt("b"), e.arguments!!.getInt("c"))
             }
-            composable("article/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> ArticleScreen(nav, settings, e.arguments!!.getInt("id")) }
-            composable("lesson/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> LessonScreen(nav, settings, e.arguments!!.getInt("id")) }
+            composable("article/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> ArticleScreen(nav, LocalSettings.current, e.arguments!!.getInt("id")) }
+            composable("lesson/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> LessonScreen(nav, LocalSettings.current, e.arguments!!.getInt("id")) }
             composable("lessons") { LessonsListScreen(nav) }
             composable("index") { IndexScreen(nav) }
             composable("index/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> IndexTopicScreen(nav, e.arguments!!.getInt("id")) }
@@ -101,17 +109,18 @@ fun AppRoot(settings: AppSettings) {
                 arguments = listOf(navArgument("id") { type = NavType.LongType }) + listOf("b", "c", "v", "ce", "ve").map { k -> navArgument(k) { type = NavType.IntType; defaultValue = 0 } }
             ) { e ->
                 val a = e.arguments!!
-                StudyEditorScreen(nav, settings, a.getLong("id"), PassageRef(a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ce"), a.getInt("ve")))
+                StudyEditorScreen(nav, LocalSettings.current, a.getLong("id"), PassageRef(a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ce"), a.getInt("ve")))
             }
-            composable("mine") { MyTopicsScreen(nav, settings) }
-            composable("topic/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e -> TopicDetailScreen(nav, settings, e.arguments!!.getLong("id")) }
-            composable("tag/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e -> TagDetailScreen(nav, settings, e.arguments!!.getLong("id")) }
+            composable("mine") { MyTopicsScreen(nav, LocalSettings.current) }
+            composable("topic/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e -> TopicDetailScreen(nav, LocalSettings.current, e.arguments!!.getLong("id")) }
+            composable("tag/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) { e -> TagDetailScreen(nav, LocalSettings.current, e.arguments!!.getLong("id")) }
             composable("progress") { ProgressScreen(nav) }
             composable("plan/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { e -> PlanScreen(nav, e.arguments!!.getInt("id")) }
             composable("quiz?practice={p}", arguments = listOf(navArgument("p") { type = NavType.BoolType; defaultValue = false })) { e -> QuizScreen(nav, e.arguments!!.getBoolean("p")) }
-            composable("prayer?o={o}", arguments = listOf(navArgument("o") { type = NavType.IntType; defaultValue = 0 })) { e -> PrayerScreen(nav, settings, e.arguments!!.getInt("o")) }
-            composable("memory") { MemoryScreen(nav, settings) }
-            composable("settings") { SettingsScreen(nav, settings) }
+            composable("prayer?o={o}", arguments = listOf(navArgument("o") { type = NavType.IntType; defaultValue = 0 })) { e -> PrayerScreen(nav, LocalSettings.current, e.arguments!!.getInt("o")) }
+            composable("memory") { MemoryScreen(nav, LocalSettings.current) }
+            composable("settings") { SettingsScreen(nav, LocalSettings.current) }
+        }
         }
     }
 }

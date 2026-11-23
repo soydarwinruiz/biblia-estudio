@@ -41,9 +41,9 @@ import java.text.Normalizer
 private fun fold(s: String) = Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{M}"), "").lowercase()
 
 @Composable
-fun SearchScreen(nav: NavController, settings: AppSettings) {
+fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String = "") {
     val c = LocalContext.current.app; val scope = rememberCoroutineScope()
-    var query by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
     var version by rememberSaveable { mutableStateOf<String?>(settings.version) }
     var testament by rememberSaveable { mutableStateOf<String?>(null) }
     var results by remember { mutableStateOf<List<SearchHit>?>(null) }
@@ -52,6 +52,7 @@ fun SearchScreen(nav: NavController, settings: AppSettings) {
         refHit = c.refParser?.parseQuery(query)
         results = c.content.search(query, version, testament, null)
     }
+    LaunchedEffect(Unit) { if (initialQuery.isNotBlank()) run() }
     Scaffold(topBar = { BackTopBar("Buscar en la Biblia", { nav.popBackStack() }) }) { pad ->
         Column(Modifier.padding(pad)) {
             OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true,
