@@ -33,7 +33,7 @@ fun SettingsScreen(nav: NavController, s: AppSettings) {
     val ctx = LocalContext.current; val c = ctx.app; val scope = rememberCoroutineScope()
     fun set(f: (AppSettings) -> AppSettings) = scope.launch {
         c.settings.update(f); val n = c.settings.current()
-        Notifications.schedule(ctx.applicationContext, n.notifications, n.notifyHour, n.notifyMinute)
+        runCatching { Notifications.schedule(ctx.applicationContext, n.notifications, n.notifyHour, n.notifyMinute) }
     }
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (!ok) Toast.makeText(ctx, "Sin permiso no se pueden mostrar recordatorios", Toast.LENGTH_LONG).show()

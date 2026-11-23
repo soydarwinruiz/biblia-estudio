@@ -13,7 +13,7 @@ import java.util.zip.GZIPInputStream
 
 /**
  * Acceso de solo lectura a la base de contenido (Biblias, notas de estudio, contenido diario).
- * La base viaja comprimida en assets/bible.db.gz y se descomprime la primera vez que se abre la app.
+ * La base viaja comprimida en assets/bible_content.bin (gzip) y se descomprime la primera vez que se abre la app.
  */
 class ContentRepository(private val context: Context) {
     companion object {
@@ -36,7 +36,7 @@ class ContentRepository(private val context: Context) {
                 val tmp = File(file.parentFile, "$DB_NAME.tmp")
                 val total = 110_000_000f
                 var copied = 0L
-                GZIPInputStream(context.assets.open("bible.db.gz"), 1 shl 16).use { input ->
+                GZIPInputStream(context.assets.open("bible_content.bin"), 1 shl 16).use { input ->
                     tmp.outputStream().buffered(1 shl 16).use { out ->
                         val buf = ByteArray(1 shl 16)
                         while (true) {

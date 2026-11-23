@@ -32,7 +32,7 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
 ## Instalar el APK
-Descarga [`apk/biblia-estudio-1.0-debug.apk`](apk/biblia-estudio-1.0-debug.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/biblia-estudio-1.1-debug.apk`](apk/biblia-estudio-1.1-debug.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
 
 ## Compilar
 Requisitos: JDK 17+, Android SDK (plataforma 35) y Gradle 8.9 o superior.
@@ -46,7 +46,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 git clone https://github.com/mrk214/bible-data-es-spa
 pdftotext Biblia_de_estudio_MacArthur.pdf mac.txt
 tools/build_all.sh bible-data-es-spa mac.txt bible.db
-gzip -c bible.db > app/src/main/assets/bible.db.gz
+gzip -c bible.db > app/src/main/assets/bible_content.bin
 ```
 Después incrementa `CONTENT_VERSION` en `ContentRepository.kt` para que la app copie la nueva base.
 El contenido diario editable está en `tools/content/` (versículos, pasajes, oraciones, preguntas y guías).
