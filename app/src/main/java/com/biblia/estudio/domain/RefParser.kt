@@ -13,7 +13,7 @@ data class RefSpan(val start: Int, val end: Int, val ref: PassageRef)
 class RefParser(abbreviations: Map<String, Int>) {
     private val abbr: Map<String, Int> = abbreviations.mapKeys { norm(it.key) }
     private val bookPattern: String = abbreviations.keys.map { norm(it) }.distinct().sortedByDescending { it.length }
-        .joinToString("|") { Regex.escape(it).replace(" ", "\\s") }
+        .joinToString("|") { a -> a.replace(Regex("[^\\p{L}\\d ]"), "").replace(" ", "\\s?") }
 
     private val cv = "(\\d{1,3})[:.](\\d{1,3})(?:\\s?[–-]\\s?(\\d{1,3})(?:[:.](\\d{1,3}))?)?"
     private val bookRef = Regex("(?<![\\p{L}\\d])($bookPattern)\\.?\\s?(\\d{1,3})(?:[:.](\\d{1,3})(?:\\s?[–-]\\s?(\\d{1,3})(?:[:.](\\d{1,3}))?)?)?", RegexOption.IGNORE_CASE)

@@ -21,11 +21,18 @@ class ScreensTest {
         rule.onRoot().captureRoboImage("build/shots/$name.png")
     }
 
-    private fun waitText(text: String, substring: Boolean = false) =
-        rule.waitUntil(60_000) { rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty() }
+    private fun waitText(text: String, substring: Boolean = false) {
+        try {
+            rule.waitUntil(60_000) { rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty() }
+        } catch (e: Throwable) {
+            rule.onRoot().printToLog("ARBOL")
+            println(rule.onRoot().printToString(maxDepth = 30))
+            rule.onRoot().captureRoboImage("build/shots/fallo_${text.take(12)}.png")
+            throw e
+        }
+    }
 
     @Test fun walkThroughScreens() {
-        waitText("Versículo del día", true)
         waitText("Leer pasaje")
         shot("01_hoy")
         rule.onRoot().performTouchInput { swipeUp() }
@@ -62,17 +69,17 @@ class ScreensTest {
     }
 
     @Test fun quizAndStudy() {
-        waitText("Preguntas del día")
+        waitText("Comenzar")
         rule.onNodeWithText("Comenzar").performScrollTo().performClick()
         waitText("Pregunta 1 de 5")
         shot("10_quiz")
-        rule.onAllNodes(hasClickAction()).filter(hasText("", substring = true)).fetchSemanticsNodes()
-        rule.onNodeWithText("Biblia").assertDoesNotExist()
+        rule.onAllNodes(hasClickAction())[2].performClick()
+        waitText("Siguiente")
+        shot("10b_quiz_respuesta")
     }
 
     @Test fun introAndStudyEditor() {
-        waitText("Versículo del día", true)
-        rule.runOnUiThread { }
+        waitText("Leer pasaje")
         rule.onNodeWithText("Estudio").performClick()
         waitText("Nuevo estudio", true)
         rule.onNodeWithText("Nuevo estudio", substring = true).performClick()

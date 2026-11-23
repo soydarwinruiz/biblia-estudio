@@ -44,10 +44,13 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 try {
                     c.init { p -> progress = p }
-                    val s = c.settings.current()
-                    Notifications.schedule(applicationContext, s.notifications, s.notifyHour, s.notifyMinute)
                     ready = true
                 } catch (e: Exception) { error = e.message ?: e.toString() }
+                // El recordatorio es secundario: si falla, la app sigue funcionando.
+                runCatching {
+                    val s = c.settings.current()
+                    Notifications.schedule(applicationContext, s.notifications, s.notifyHour, s.notifyMinute)
+                }
             }
             BibliaTheme(settings.theme) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
