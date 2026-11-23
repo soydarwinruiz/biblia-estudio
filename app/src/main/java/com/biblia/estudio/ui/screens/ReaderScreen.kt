@@ -252,7 +252,10 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
         }
     }
 
-    if (showPicker) BookChapterPicker(c.content.books, book, onDismiss = { showPicker = false }) { b, ch -> showPicker = false; go(b, ch) }
+    if (showPicker) BookChapterPicker(c.content.books, book, onDismiss = { showPicker = false }, pickVerse = true) { b, ch, v ->
+        showPicker = false; go(b, ch)
+        if (v > 0) target = v to v
+    }
     val first = selection.minOrNull()
     when (sheet) {
         "notes" -> if (first != null) StudyNotesSheet(book, chapter, first, onDismiss = { sheet = null }, onRef = { previewRef = it },
@@ -327,12 +330,20 @@ private fun SelectionBar(count: Int, onColor: (Int?) -> Unit, onAction: (String)
 }
 
 @Composable
-fun BookChapterPicker(books: List<Book>, current: Int, onDismiss: () -> Unit, onPick: (Int, Int) -> Unit) {
+fun BookChapterPicker(books: List<Book>, current: Int, onDismiss: () -> Unit, onPick: (Int, Int) -> Unit) =
+    BookChapterPicker(books, current, onDismiss, pickVerse = false) { b, ch, _ -> onPick(b, ch) }
+
+/** Selector en pasos: libro → capítulo → versículo (si pickVerse). verse = 0 significa capítulo completo. */
+@Composable
+fun BookChapterPicker(books: List<Book>, current: Int, onDismiss: () -> Unit, pickVerse: Boolean, onPick: (Int, Int, Int) -> Unit) {
+    val c = LocalContext.current.app
     var selBook by remember { mutableStateOf<Book?>(null) }
+    var selChapter by remember { mutableIntStateOf(0) }
+    val verseCount by produceState(0, selBook, selChapter) { value = if (selBook != null && selChapter > 0) c.content.verseCount(selBook!!.id, selChapter) else 0 }
     var testament by remember { mutableStateOf(if (current >= 40) "NT" else "AT") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(selBook?.name ?: "Elegir libro") },
+        title = { Text(when { selBook == null -> "Elegir libro"; selChapter > 0 -> "${selBook!!.name} $selChapter · versículo"; else -> selBook!!.name }) },
         text = {
             Column(Modifier.heightIn(max = 480.dp)) {
                 val sb = selBook
@@ -340,22 +351,33 @@ fun BookChapterPicker(books: List<Book>, current: Int, onDismiss: () -> Unit, on
                     Row { FilterChip(testament == "AT", { testament = "AT" }, { Text("Antiguo T.") }); Spacer(Modifier.width(8.dp)); FilterChip(testament == "NT", { testament = "NT" }, { Text("Nuevo T.") }) }
                     LazyVerticalGrid(GridCells.Fixed(3), Modifier.padding(top = 8.dp)) {
                         items(books.filter { it.testament == testament }) { b ->
-                            OutlinedButton(onClick = { if (b.chapters == 1) onPick(b.id, 1) else selBook = b }, modifier = Modifier.padding(2.dp), contentPadding = PaddingValues(4.dp),
+                            OutlinedButton(onClick = { selBook = b; if (b.chapters == 1) { if (pickVerse) selChapter = 1 else onPick(b.id, 1, 0) } }, modifier = Modifier.padding(2.dp), contentPadding = PaddingValues(4.dp),
                                 colors = if (b.id == current) ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else ButtonDefaults.outlinedButtonColors()) {
                                 Text(b.name, maxLines = 1, style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
-                } else {
+                } else if (selChapter == 0) {
                     LazyVerticalGrid(GridCells.Adaptive(52.dp)) {
                         items((1..sb.chapters).toList()) { ch ->
-                            OutlinedButton(onClick = { onPick(sb.id, ch) }, modifier = Modifier.padding(2.dp), contentPadding = PaddingValues(0.dp)) { Text("$ch") }
+                            OutlinedButton(onClick = { if (pickVerse) selChapter = ch else onPick(sb.id, ch, 0) }, modifier = Modifier.padding(2.dp), contentPadding = PaddingValues(0.dp)) { Text("$ch") }
+                        }
+                    }
+                } else {
+                    TextButton(onClick = { onPick(sb.id, selChapter, 0) }) { Text("Ir al capítulo completo") }
+                    LazyVerticalGrid(GridCells.Adaptive(52.dp)) {
+                        items((1..verseCount).toList()) { v ->
+                            OutlinedButton(onClick = { onPick(sb.id, selChapter, v) }, modifier = Modifier.padding(2.dp), contentPadding = PaddingValues(0.dp)) { Text("$v") }
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { if (selBook != null) selBook = null else onDismiss() }) { Text(if (selBook != null) "Libros" else "Cerrar") } }
+        confirmButton = {
+            TextButton(onClick = {
+                when { selChapter > 0 && (selBook?.chapters ?: 0) > 1 -> selChapter = 0; selBook != null -> { selBook = null; selChapter = 0 }; else -> onDismiss() }
+            }) { Text(when { selChapter > 0 && (selBook?.chapters ?: 0) > 1 -> "Capítulos"; selBook != null -> "Libros"; else -> "Cerrar" }) }
+        }
     )
 }
 

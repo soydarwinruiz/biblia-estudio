@@ -30,13 +30,13 @@ class VerseWidget : AppWidgetProvider() {
         suspend fun render(context: Context, manager: AppWidgetManager, ids: IntArray) {
             val c = context.app
             val prepared = context.getDatabasePath(ContentRepository.DB_NAME).exists()
-            val (text, ref) = if (!prepared) "Abre la app una vez para preparar la biblioteca." to "Biblia de Estudio"
+            val (text, ref) = if (!prepared) "Abre la app una vez para preparar la biblioteca." to "Códice vivo"
             else runCatching {
                 c.init()
                 val version = c.settings.current().version
                 val r = c.content.verseOfDay(today())
                 c.content.passageText(version, r) to "${c.content.label(r)} · $version"
-            }.getOrElse { "Toca para abrir la Biblia." to "Biblia de Estudio" }
+            }.getOrElse { "Toca para abrir la Biblia." to "Códice vivo" }
             val intent = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             for (id in ids) {
                 val views = RemoteViews(context.packageName, R.layout.widget_verse).apply {

@@ -1,4 +1,11 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M34,32h40a4,4 0,0 1,4 4v38a4,4 0,0 1,-4 4h-40a4,4 0,0 1,-4 -4v-38a4,4 0,0 1,4 -4z"/>
-    <path android:fillColor="#7A4A1E" android:pathData="M51,40h6v10h10v6h-10v16h-6v-16h-10v-6h10z"/>
+    <!-- Códice abierto -->
+    <path android:fillColor="#FFF4E3" android:pathData="M54,38 C46,33 36,32 28,34 L28,74 C36,72 46,73 54,78 Z"/>
+    <path android:fillColor="#FFE9C9" android:pathData="M54,38 C62,33 72,32 80,34 L80,74 C72,72 62,73 54,78 Z"/>
+    <path android:strokeColor="#E2B866" android:strokeWidth="1.6" android:pathData="M54,38 L54,78"/>
+    <!-- líneas de texto -->
+    <path android:strokeColor="#C9A27A" android:strokeWidth="1.4" android:pathData="M33,44 C39,43 44,44 49,46 M33,50 C39,49 44,50 49,52 M33,56 C39,55 44,56 49,58 M33,62 C39,61 44,62 49,64"/>
+    <!-- cruz y llama (vivo) -->
+    <path android:fillColor="#B5651D" android:pathData="M65,43 h3 v6 h5 v3 h-5 v12 h-3 v-12 h-5 v-3 h5 z"/>
+    <path android:fillColor="#E2B866" android:pathData="M54,26 C57,30 58,32 54,36 C50,32 51,30 54,26 Z"/>
 </vector>

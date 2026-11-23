@@ -110,6 +110,11 @@ class ContentRepository(private val context: Context) {
         }.sortedBy { order.indexOf(it.version) }
     }
 
+    /** Número de versículos del capítulo (según RVR1960). */
+    suspend fun verseCount(book: Int, chapter: Int): Int = io {
+        d.list("SELECT MAX(verse_end) FROM verses WHERE version='RVR1960' AND book=? AND chapter=?", book, chapter) { it.getInt(0) }.firstOrNull() ?: 0
+    }
+
     suspend fun crossRefs(book: Int, chapter: Int, verse: Int): List<String> = io {
         d.list("SELECT refs FROM crossrefs WHERE book=? AND chapter=? AND verse=?", book, chapter, verse) { it.getString(0) }
     }

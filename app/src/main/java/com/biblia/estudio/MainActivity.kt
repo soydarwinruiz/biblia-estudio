@@ -57,7 +57,8 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     if (ready) AppRoot(settings)
                     else Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Biblia de Estudio", style = MaterialTheme.typography.headlineSmall)
+                        Text("Códice vivo", style = MaterialTheme.typography.headlineSmall)
+                        Text("Biblia de estudio", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(16.dp))
                         if (error != null) Text("No se pudo preparar la base de datos: $error", color = MaterialTheme.colorScheme.error)
                         else {
