@@ -36,7 +36,7 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
 ## Instalar el APK
-Descarga [`apk/biblia-estudio-1.2.apk`](apk/biblia-estudio-1.2.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/biblia-estudio-1.2.1.apk`](apk/biblia-estudio-1.2.1.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
 
 ## Firma
 El APK se firma con `keystore/biblia-release.jks` (contraseñas en `app/build.gradle.kts`). Usa siempre esta misma clave
@@ -45,8 +45,8 @@ para que las actualizaciones se instalen sobre la versión anterior sin perder d
 ## Compilar
 Requisitos: JDK 17+, Android SDK (plataforma 35) y Gradle 8.9 o superior.
 ```bash
-./gradlew assembleDebug        # o: gradle assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease      # o: gradle assembleRelease
+adb install app/build/outputs/apk/release/app-release.apk
 ```
 
 ## Regenerar la base de contenido
