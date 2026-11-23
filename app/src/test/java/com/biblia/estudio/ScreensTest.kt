@@ -21,6 +21,11 @@ class ScreensTest {
         rule.onRoot().captureRoboImage("build/shots/$name.png")
     }
 
+    /** Las preferencias persisten entre pruebas: empezar siempre en Juan 1 con tema claro. */
+    private fun reset() = kotlinx.coroutines.runBlocking {
+        rule.activity.app.settings.update { it.copy(lastBook = 43, lastChapter = 1, theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT) }
+    }
+
     private fun waitText(text: String, substring: Boolean = false) {
         try {
             rule.waitUntil(60_000) { rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty() }
@@ -34,7 +39,15 @@ class ScreensTest {
 
     @Test fun walkThroughScreens() {
         waitText("Leer pasaje")
+        reset()
         shot("01_hoy")
+        rule.activityRule.scenario.onActivity { a ->
+            val d = androidx.core.content.ContextCompat.getDrawable(a, R.mipmap.ic_launcher)!!
+            val bmp = android.graphics.Bitmap.createBitmap(432, 432, android.graphics.Bitmap.Config.ARGB_8888)
+            d.setBounds(0, 0, 432, 432); d.draw(android.graphics.Canvas(bmp))
+            java.io.File("build/shots").mkdirs()
+            java.io.FileOutputStream("build/shots/00_icono.png").use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
         rule.onRoot().performTouchInput { swipeUp() }
         shot("02_hoy_abajo")
 
@@ -80,6 +93,7 @@ class ScreensTest {
 
     @Test fun introAndStudyEditor() {
         waitText("Leer pasaje")
+        reset()
         rule.onNodeWithText("Estudio").performClick()
         waitText("Nuevo estudio", true)
         rule.onNodeWithText("Nuevo estudio", substring = true).performClick()
@@ -97,6 +111,7 @@ class ScreensTest {
 
     @Test fun darkModeMemoryAndLesson() {
         waitText("Leer pasaje")
+        reset()
         kotlinx.coroutines.runBlocking {
             container.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.DARK) }
             container.user.addMemory(19, 23, 1, 1)
@@ -123,5 +138,22 @@ class ScreensTest {
         rule.onNodeWithText("Biblia").performClick()
         waitText("El Verbo hecho carne")
         shot("16_lector_oscuro")
+    }
+
+    @Test fun verseSelector() {
+        waitText("Leer pasaje")
+        reset()
+        rule.onNodeWithText("Biblia").performClick()
+        waitText("El Verbo hecho carne")
+        rule.onAllNodesWithText("Juan 1", useUnmergedTree = true).onLast().performClick()
+        waitText("Elegir libro")
+        rule.onNodeWithText("Nuevo T.").performClick()
+        rule.onNodeWithText("Romanos").performClick()
+        rule.onNodeWithText("8").performClick()
+        waitText("Ir al capítulo completo")
+        shot("17_selector_versiculo")
+        rule.onNodeWithText("28").performClick()
+        waitText("a los que aman a Dios", true)
+        shot("18_romanos_8_28")
     }
 }

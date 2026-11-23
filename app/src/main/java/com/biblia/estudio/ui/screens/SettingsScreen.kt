@@ -83,14 +83,14 @@ fun SettingsScreen(nav: NavController, s: AppSettings) {
             Text("Tus resaltados, notas, temas, etiquetas, estudios y progreso se guardan solo en este teléfono. Haz copias de seguridad en un archivo.",
                 Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
             Row(Modifier.padding(16.dp)) {
-                Button(onClick = { exportLauncher.launch("biblia-respaldo-${LocalDate.now()}.json") }) { Text("Exportar") }
+                Button(onClick = { exportLauncher.launch("codice-vivo-respaldo-${LocalDate.now()}.json") }) { Text("Exportar") }
                 Spacer(Modifier.width(12.dp))
                 OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }) { Text("Importar") }
             }
 
             SectionHeader("Acerca de")
             Text(
-                "Biblia de Estudio — aplicación 100% local: no solicita permiso de Internet; todo el contenido y tus datos permanecen en el dispositivo.\n\n" +
+                "Códice vivo — Biblia de estudio 100% local: no solicita permiso de Internet; todo el contenido y tus datos permanecen en el dispositivo.\n\n" +
                 "Contenido de estudio: Biblia de Estudio MacArthur (© Editorial Portavoz / Thomas Nelson), incluida para uso personal.\n\n" +
                 "Textos bíblicos: " + c.content.versions.joinToString("\n") { "• ${it.id}: ${it.copyright.ifBlank { it.name }}" },
                 Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall

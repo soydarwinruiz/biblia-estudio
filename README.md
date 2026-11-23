@@ -1,4 +1,4 @@
-# Biblia de Estudio (Android, 100% local)
+# Códice vivo — Biblia de estudio (Android, 100% local)
 
 Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Internet**: todo el contenido
 (Biblias, notas de estudio, contenido diario) viaja dentro del APK y tus datos personales se guardan solo en el teléfono.
@@ -36,7 +36,7 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
 ## Instalar el APK
-Descarga [`apk/biblia-estudio-1.2.1.apk`](apk/biblia-estudio-1.2.1.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/codice-vivo-1.3.apk`](apk/codice-vivo-1.3.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
 
 ## Firma
 El APK se firma con `keystore/biblia-release.jks` (contraseñas en `app/build.gradle.kts`). Usa siempre esta misma clave
