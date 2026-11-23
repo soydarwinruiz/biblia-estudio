@@ -13,8 +13,8 @@ android {
         applicationId = "com.biblia.estudio"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.2.1"
     }
     signingConfigs {
         // Clave propia y estable: permite instalar actualizaciones sin desinstalar.
@@ -29,8 +29,9 @@ android {
     buildTypes {
         debug { signingConfig = signingConfigs.getByName("release") }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Sin R8: el código probado es exactamente el que se instala.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("release")
         }
