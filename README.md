@@ -71,3 +71,8 @@ app/src/main/java/.../domain Analizador de referencias, gamificación y logros
 app/src/main/java/.../ui     Pantallas en Compose
 app/src/main/java/.../work   Notificación diaria (WorkManager)
 ```
+
+## Versión para iPhone
+La app web (PWA) está en el repositorio público `codice-vivo-web` (solo código).
+Su biblioteca es `biblioteca/codice-vivo-biblioteca.db.gz` (generada con `tools/build_web_library.py`, índice FTS5).
+Descárgala en el iPhone y elígela en la app la primera vez.
