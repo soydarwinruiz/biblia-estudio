@@ -65,7 +65,8 @@ class ScreensTest {
         rule.onNodeWithText("Estudio").performClick()
         waitText("Introducciones a los libros")
         shot("06_estudio")
-        rule.onNodeWithText("Hermenéutica: principios de interpretación", substring = true).performScrollTo().performClick()
+        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Hermenéutica: principios de interpretación", substring = true))
+        rule.onNodeWithText("Hermenéutica: principios de interpretación", substring = true).performClick()
         waitText("Principios fundamentales")
         shot("07_hermeneutica")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -155,5 +156,50 @@ class ScreensTest {
         rule.onNodeWithText("28").performClick()
         waitText("a los que aman a Dios", true)
         shot("18_romanos_8_28")
+    }
+
+    @Test fun dictionaryWordsAndContinuous() {
+        waitText("Leer pasaje")
+        reset()
+        // Diccionario desde Estudio
+        rule.onNodeWithText("Estudio").performClick()
+        waitText("Diccionario bíblico")
+        rule.onNodeWithText("Diccionario bíblico").performClick()
+        waitText("280 entradas")
+        rule.onNode(hasSetTextAction()).performTextInput("Abra")
+        waitText("Abraham")
+        rule.onNodeWithText("Abraham").performClick()
+        waitText("En la Biblia")
+        Thread.sleep(800); rule.waitForIdle()
+        shot("19_diccionario_abraham")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+
+        // Palabras resaltadas en Juan 1:1
+        rule.onNodeWithText("Biblia").performClick()
+        waitText("El Verbo hecho carne")
+        rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
+        rule.onNodeWithText("Palabras").performClick()
+        waitText("Toca las palabras que quieres marcar y elige un color.")
+        rule.onAllNodesWithText("Verbo,").onFirst().performClick()
+        shot("20_palabras_dialogo")
+        // primer color de la paleta
+        rule.onAllNodes(hasClickAction()).filter(hasContentDescription("Quitar").not()).fetchSemanticsNodes()
+        kotlinx.coroutines.runBlocking {
+            rule.activity.app.user.setWordHighlights("RVR1960", 43, 1, 1, listOf(Triple(4, 4, 0xFFFFF176.toInt()), Triple(14, 15, 0xFF90CAF9.toInt())))
+        }
+        rule.onNodeWithText("Cancelar").performClick()
+        rule.waitForIdle(); Thread.sleep(300)
+        shot("21_palabras_resaltadas")
+
+        // Lectura continua
+        rule.onNodeWithText("RVR1960").performClick()
+        rule.onNodeWithText("Lectura continua").performClick()
+        Thread.sleep(800); rule.waitForIdle()
+        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Marcar Juan 1 como leído"))
+        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Juan 2"))
+        waitText("Juan 2")
+        shot("22_lectura_continua")
+        kotlinx.coroutines.runBlocking { rule.activity.app.settings.update { it.copy(continuous = false) } }
     }
 }

@@ -18,7 +18,7 @@ import java.util.zip.GZIPInputStream
 class ContentRepository(private val context: Context) {
     companion object {
         const val DB_NAME = "bible_content.db"
-        const val CONTENT_VERSION = 2
+        const val CONTENT_VERSION = 3
     }
 
     private var db: SQLiteDatabase? = null
@@ -169,6 +169,47 @@ class ContentRepository(private val context: Context) {
 
     suspend fun abbreviations(): Map<String, Int> = io {
         d.list("SELECT abbr,book FROM book_abbr") { it.getString(0) to it.getInt(1) }.toMap()
+    }
+
+    // ---------------- Diccionario bíblico ----------------
+    private fun fold(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "").lowercase().trim()
+
+    suspend fun dictionarySearch(query: String, category: String?): List<DictEntry> = io {
+        val q = fold(query)
+        val sb = StringBuilder("SELECT id,term,category,'' FROM dictionary WHERE 1=1")
+        val args = mutableListOf<Any>()
+        if (q.isNotEmpty()) { sb.append(" AND (norm LIKE ? OR norm_def LIKE ?)"); args.add("$q%"); args.add("% $q%") }
+        if (category != null) { sb.append(" AND category=?"); args.add(category) }
+        sb.append(" ORDER BY CASE WHEN norm LIKE ? THEN 0 ELSE 1 END, norm"); args.add("$q%")
+        d.list(sb.toString(), *args.toTypedArray()) { DictEntry(it.getInt(0), it.getString(1), it.getString(2), "") }
+    }
+
+    suspend fun dictionaryCategories(): List<String> = io { d.list("SELECT DISTINCT category FROM dictionary ORDER BY category") { it.getString(0) } }
+
+    suspend fun dictionaryEntry(id: Int): DictEntry? = io {
+        d.list("SELECT id,term,category,definition FROM dictionary WHERE id=?", id) { DictEntry(it.getInt(0), it.getString(1), it.getString(2), it.getString(3)) }.firstOrNull()
+    }
+
+    /** Busca una entrada cuyo término coincida exactamente (sin acentos ni mayúsculas). */
+    suspend fun dictionaryFind(term: String): DictEntry? = io {
+        val q = fold(term)
+        d.list("SELECT id,term,category,definition FROM dictionary WHERE norm=? OR norm=? LIMIT 1", q, q.removeSuffix("s")) { DictEntry(it.getInt(0), it.getString(1), it.getString(2), it.getString(3)) }.firstOrNull()
+    }
+
+    suspend fun notesMentioning(term: String, limit: Int = 15): List<StudyNote> = io {
+        d.list("SELECT id,book,chapter,verse,chapter_end,verse_end,text FROM study_notes WHERE text LIKE ? ORDER BY book,chapter,verse LIMIT $limit", "%$term%") {
+            StudyNote(it.getLong(0), it.getInt(1), it.getInt(2), it.getInt(3), it.getInt(4), it.getInt(5), it.getString(6))
+        }
+    }
+
+    suspend fun countInBible(term: String, version: String = "RVR1960"): Int = io {
+        val q = term.trim().split(Regex("\\s+")).joinToString(" ") { it.replace(Regex("[\"*():^-]"), "") }
+        if (q.isBlank()) 0 else d.list("SELECT COUNT(*) FROM verses_fts f JOIN verses v ON v.id=f.docid WHERE verses_fts MATCH ? AND v.version=?", "\"$q\"", version) { it.getInt(0) }.first()
+    }
+
+    suspend fun indexTopicFor(term: String): IndexTopic? = io {
+        val t = term.uppercase()
+        d.list("SELECT id,name FROM topics WHERE name=? OR name LIKE ? OR name LIKE ? ORDER BY length(name) LIMIT 1", t, "$t,%", "$t %") { IndexTopic(it.getInt(0), it.getString(1)) }.firstOrNull()
     }
 
     // ---------------- Contenido diario ----------------

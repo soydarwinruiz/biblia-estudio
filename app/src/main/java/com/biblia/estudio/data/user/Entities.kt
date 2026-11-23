@@ -115,3 +115,13 @@ data class MemoryVerse(
     val box: Int = 0, val nextReview: Long = 0, val reviews: Int = 0,
     val created: Long = System.currentTimeMillis()
 )
+
+/** Resaltado de palabras sueltas dentro de un versículo (índices de palabra, en una versión concreta). */
+@Serializable
+@Entity(tableName = "word_highlights", indices = [Index(value = ["version", "book", "chapter"])])
+data class WordHighlight(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val version: String, val book: Int, val chapter: Int, val verse: Int,
+    val wordStart: Int, val wordEnd: Int, val color: Int,
+    val created: Long = System.currentTimeMillis()
+)

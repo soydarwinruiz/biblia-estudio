@@ -43,4 +43,5 @@ data class Plan(val id: Int, val name: String, val description: String, val days
 data class Reading(val book: Int, val chapterStart: Int, val chapterEnd: Int)
 data class SearchHit(val version: String, val book: Int, val chapter: Int, val verse: Int, val text: String)
 data class IndexTopic(val id: Int, val name: String)
+data class DictEntry(val id: Int, val term: String, val category: String, val definition: String)
 data class CompareRow(val version: String, val versionName: String, val text: String)

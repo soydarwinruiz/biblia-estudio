@@ -53,6 +53,7 @@ fun StudyHubScreen(nav: NavController) {
             item { SectionHeader("Biblia de Estudio MacArthur") }
             item { HubItem(Icons.Filled.Info, "Introducciones a los libros", "Título, autor y fecha, contexto, temas, retos de interpretación y bosquejo") { picker = "intro" } }
             item { HubItem(Icons.AutoMirrored.Filled.Notes, "Notas versículo a versículo", "Más de 17.000 notas de estudio por capítulo") { picker = "commentary" } }
+            item { HubItem(Icons.Filled.Translate, "Diccionario bíblico", "Personas, lugares, términos, objetos y fiestas") { nav.navigate("dictionary") } }
             item { HubItem(Icons.Filled.ListAlt, "Índice temático", "Más de 600 temas con sus referencias") { nav.navigate("index") } }
             item { HubItem(Icons.Filled.CastForEducation, "Lecciones", "Curso diario: panorama de la Biblia y doctrina") { nav.navigate("lessons") } }
             val method = articles.filter { it.category == "Método de estudio" }

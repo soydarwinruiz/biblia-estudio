@@ -8,9 +8,9 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Highlight::class, VerseNote::class, Bookmark::class, UserTopic::class, TopicVerse::class, Tag::class, TagVerse::class,
-        ChapterRead::class, PlanEnrollment::class, PlanDayDone::class, ActivityDay::class, QuizDay::class, DevotionalDone::class, Study::class, LessonReflection::class, MemoryVerse::class],
-    version = 2, exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)]
+        ChapterRead::class, PlanEnrollment::class, PlanDayDone::class, ActivityDay::class, QuizDay::class, DevotionalDone::class, Study::class, LessonReflection::class, MemoryVerse::class, WordHighlight::class],
+    version = 3, exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)]
 )
 abstract class UserDatabase : RoomDatabase() {
     abstract fun dao(): UserDao

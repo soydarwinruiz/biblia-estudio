@@ -72,7 +72,8 @@ prs = []
 for blk in raw:
     lines = [x for x in blk.strip().split("\n") if x.strip()]
     title, ref = [x.strip() for x in lines[0].split("|")]
-    prs.append((title, " ".join(lines[1:]).strip()) + parse_ref(ref))
+    r = parse_ref(ref); assert text_of(*r), f"Oración con referencia inválida: {title} ({ref})"
+    prs.append((title, " ".join(lines[1:]).strip()) + r)
 con.executemany("INSERT INTO prayers(title,text,book,chapter,verse,chapter_end,verse_end) VALUES(?,?,?,?,?,?,?)", prs)
 
 # ---- guías (artículos de método) ----

@@ -35,6 +35,9 @@ class ContentTest {
         assertEquals(9, content.plans().size)
         assertEquals(365, content.planDays(1).size)
         assertTrue(content.indexTopics("FE").isNotEmpty())
+        assertTrue(content.dictionarySearch("abra", null).any { it.term == "Abraham" })
+        assertEquals("Jerusalén", content.dictionaryFind("jerusalen")?.term)
+        assertTrue(content.countInBible("Abraham") > 100)
         println("OK: ${content.notesForChapter(1, 1).size} notas en Génesis 1")
     }
 
@@ -53,6 +56,8 @@ class ContentTest {
         assertEquals(PassageRef(43, 3, 16, 3, 16), p.parseQuery("juan 3:16"))
         assertEquals(45, p.parseQuery("Romanos 8")!!.book)
         assertEquals(46, p.parseQuery("1 Co 13")!!.book)
+        assertEquals(PassageRef(65, 1, 14, 1, 15), p.parse("Jud. 14–15").first().ref)
+        assertEquals(PassageRef(57, 1, 10, 1, 16), p.parse("Flm. 10–16").first().ref)
     }
 
     @Test fun userDataAndBackup() = runBlocking {

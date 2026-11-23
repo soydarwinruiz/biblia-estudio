@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -60,66 +62,131 @@ import com.biblia.estudio.ui.theme.TopicColors
 import com.biblia.estudio.ui.theme.verseTextStyle
 import kotlinx.coroutines.launch
 
-private data class ChapterData(val verses: List<Verse>, val parallel: Map<Int, String>, val headings: List<Heading>, val noteVerses: Set<Int>)
+/** Un capítulo cargado en el lector. */
+private data class ChapterBlock(val book: Int, val chapter: Int, val verses: List<Verse>, val parallel: Map<Int, String>, val headings: List<Heading>, val noteVerses: Set<Int>)
+
+/** Elemento de la lista del lector. */
+private sealed interface RItem {
+    val book: Int; val chapter: Int
+    data class Title(override val book: Int, override val chapter: Int) : RItem
+    data class Head(override val book: Int, override val chapter: Int, val h: Heading, val idx: Int) : RItem
+    data class V(override val book: Int, override val chapter: Int, val v: Verse) : RItem
+    data class End(override val book: Int, override val chapter: Int) : RItem
+}
+
+private data class VKey(val book: Int, val chapter: Int, val verse: Int)
+
+private fun key(b: Int, c: Int, v: Int) = b * 1_000_000L + c * 1000L + v
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argChapter: Int, argVerse: Int, argVerseEnd: Int) {
     val ctx = LocalContext.current; val c = ctx.app; val scope = rememberCoroutineScope()
-    var book by rememberSaveable(argBook, argChapter) { mutableIntStateOf(if (argBook > 0) argBook else settings.lastBook) }
-    var chapter by rememberSaveable(argBook, argChapter) { mutableIntStateOf(if (argChapter > 0) argChapter else settings.lastChapter) }
-    var target by rememberSaveable(argBook, argChapter) { mutableStateOf(if (argVerse > 0) argVerse to (if (argVerseEnd >= argVerse) argVerseEnd else argVerse) else null) }
-    val bk = c.content.book(book)
-    val data by produceState<ChapterData?>(null, book, chapter, settings.version, settings.parallel, settings.parallelVersion) {
-        val verses = c.content.chapter(settings.version, book, chapter)
-        val par = if (settings.parallel) c.content.chapter(settings.parallelVersion, book, chapter).associate { it.verse to it.text } else emptyMap()
-        value = ChapterData(verses, par, if (settings.showHeadings) c.content.headings(settings.version, book, chapter) else emptyList(), c.content.chaptersWithNotes(book, chapter))
-    }
-    LaunchedEffect(book, chapter) { c.settings.update { it.copy(lastBook = book, lastChapter = chapter) } }
-    val highlights by c.user.dao.highlightsForChapter(book, chapter).collectAsState(initial = emptyList())
-    val notes by c.user.dao.notesForChapter(book, chapter).collectAsState(initial = emptyList())
-    val bookmarks by c.user.dao.bookmarksForChapter(book, chapter).collectAsState(initial = emptyList())
-    val tagged by c.user.dao.taggedVersesInChapter(book, chapter).collectAsState(initial = emptyList())
-    val isRead by c.user.dao.isRead(book, chapter).collectAsState(initial = 0)
-    val hl = highlights.associate { it.verse to it.color }
-    val noteMap = notes.groupBy { it.verse }
-    val bmSet = bookmarks.map { it.verse }.toSet()
-    val taggedSet = tagged.toSet()
+    var startBook by rememberSaveable(argBook, argChapter) { mutableIntStateOf(if (argBook > 0) argBook else settings.lastBook) }
+    var startChapter by rememberSaveable(argBook, argChapter) { mutableIntStateOf(if (argChapter > 0) argChapter else settings.lastChapter) }
+    var target by remember(argBook, argChapter) { mutableStateOf(if (argVerse > 0) VKey(startBook, startChapter, argVerse) to (if (argVerseEnd >= argVerse) argVerseEnd else argVerse) else null) }
+    val continuous = settings.continuous
 
-    var selection by remember(book, chapter) { mutableStateOf(setOf<Int>()) }
+    suspend fun load(b: Int, ch: Int): ChapterBlock {
+        val verses = c.content.chapter(settings.version, b, ch)
+        val par = if (settings.parallel) c.content.chapter(settings.parallelVersion, b, ch).associate { it.verse to it.text } else emptyMap()
+        return ChapterBlock(b, ch, verses, par, if (settings.showHeadings) c.content.headings(settings.version, b, ch) else emptyList(), c.content.chaptersWithNotes(b, ch))
+    }
+    fun nextOf(b: Int, ch: Int): Pair<Int, Int>? = if (ch < c.content.book(b).chapters) b to ch + 1 else if (b < 66) b + 1 to 1 else null
+    fun prevOf(b: Int, ch: Int): Pair<Int, Int>? = if (ch > 1) b to ch - 1 else if (b > 1) b - 1 to c.content.book(b - 1).chapters else null
+
+    var blocks by remember { mutableStateOf<List<ChapterBlock>>(emptyList()) }
+    var loadingMore by remember { mutableStateOf(false) }
+    LaunchedEffect(startBook, startChapter, settings.version, settings.parallel, settings.parallelVersion, settings.showHeadings, continuous) {
+        blocks = emptyList()
+        val first = load(startBook, startChapter)
+        blocks = if (continuous) listOfNotNull(first, nextOf(startBook, startChapter)?.let { load(it.first, it.second) }) else listOf(first)
+    }
+
+    // Datos personales de todos los capítulos (filtrados al pintar)
+    val highlights by c.user.dao.allHighlights().collectAsState(initial = emptyList())
+    val notes by c.user.dao.allNotes().collectAsState(initial = emptyList())
+    val bookmarks by c.user.dao.bookmarks().collectAsState(initial = emptyList())
+    val tagged by c.user.dao.allTaggedKeys().collectAsState(initial = emptyList())
+    val readList by c.user.dao.chaptersRead().collectAsState(initial = emptyList())
+    val wordHl by c.user.dao.wordHighlights(settings.version).collectAsState(initial = emptyList())
+    val hl = remember(highlights) { highlights.associate { key(it.book, it.chapter, it.verse) to it.color } }
+    val noteMap = remember(notes) { notes.groupBy { key(it.book, it.chapter, it.verse) } }
+    val bmSet = remember(bookmarks) { bookmarks.map { key(it.book, it.chapter, it.verse) }.toSet() }
+    val taggedSet = remember(tagged) { tagged.toSet() }
+    val readSet = remember(readList) { readList.map { it.book * 1000 + it.chapter }.toSet() }
+    val wordMap = remember(wordHl) { wordHl.groupBy { key(it.book, it.chapter, it.verse) } }
+
+    var selection by remember { mutableStateOf(setOf<VKey>()) }
     var showPicker by remember { mutableStateOf(false) }
     var versionMenu by remember { mutableStateOf(false) }
-    var sheet by remember { mutableStateOf<String?>(null) }   // notes | note | topic | tag
+    var sheet by remember { mutableStateOf<String?>(null) }   // notes | note | topic | tag | words
     var previewRef by remember { mutableStateOf<PassageRef?>(null) }
     val listState = rememberLazyListState()
-    val speakKey = "cap:$book:$chapter:${settings.version}"
-    val speakingKey by c.speaker.speaking.collectAsState()
-    val speakingIdx by c.speaker.current.collectAsState()
-    val isSpeaking = speakingKey == speakKey
-    DisposableEffect(book, chapter) { onDispose { if (c.speaker.speaking.value?.startsWith("cap:") == true) c.speaker.stop() } }
 
-    fun go(b: Int, ch: Int) { book = b; chapter = ch; target = null; selection = emptySet(); scope.launch { listState.scrollToItem(0) } }
-    fun next() { if (chapter < bk.chapters) go(book, chapter + 1) else if (book < 66) go(book + 1, 1) }
-    fun prev() { if (chapter > 1) go(book, chapter - 1) else if (book > 1) go(book - 1, c.content.book(book - 1).chapters) }
-
-    // Ítems de la lista: encabezados y versículos
-    val items = remember(data) {
-        val d = data ?: return@remember emptyList<Any>()
-        val byVerse = d.headings.groupBy { it.beforeVerse }
-        buildList { d.verses.forEach { v -> byVerse[v.verse]?.forEach { add(it) }; add(v) } }
+    val items = remember(blocks) {
+        buildList {
+            blocks.forEach { b ->
+                add(RItem.Title(b.book, b.chapter))
+                val byVerse = b.headings.groupBy { it.beforeVerse }
+                b.verses.forEach { v -> byVerse[v.verse]?.forEachIndexed { i, h -> add(RItem.Head(b.book, b.chapter, h, i)) }; add(RItem.V(b.book, b.chapter, v)) }
+                add(RItem.End(b.book, b.chapter))
+            }
+        }
     }
-    LaunchedEffect(speakingIdx) {
-        if (isSpeaking && speakingIdx > 0) {
-            val v = data?.verses?.getOrNull(speakingIdx - 1)
-            val idx = items.indexOfFirst { it === v }
-            if (idx >= 0) listState.animateScrollToItem((idx).coerceAtLeast(0))
+    // Capítulo visible (para el título, «continuar leyendo» y acciones)
+    val offset = if (continuous) 1 else 0   // en lectura continua hay un botón «capítulo anterior» antes de los ítems
+    val visible by remember(items, offset) { derivedStateOf { items.getOrNull((listState.firstVisibleItemIndex - offset + 1).coerceAtLeast(0)) ?: items.firstOrNull() } }
+    val book = visible?.book ?: startBook
+    val chapter = visible?.chapter ?: startChapter
+    val bk = c.content.book(book)
+    LaunchedEffect(book, chapter) { c.settings.update { it.copy(lastBook = book, lastChapter = chapter) } }
+
+    // Cargar el siguiente capítulo al acercarse al final (lectura continua)
+    LaunchedEffect(listState, continuous, blocks) {
+        if (!continuous) return@LaunchedEffect
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { last ->
+            if (!loadingMore && blocks.isNotEmpty() && last >= items.size - 8) {
+                val lb = blocks.last(); val n = nextOf(lb.book, lb.chapter) ?: return@collect
+                loadingMore = true
+                val nb = load(n.first, n.second)
+                blocks = (blocks + nb).takeLast(40)
+                loadingMore = false
+            }
         }
     }
     LaunchedEffect(items, target) {
         val t = target ?: return@LaunchedEffect
-        val idx = items.indexOfFirst { it is Verse && it.verse == t.first }
-        if (idx >= 0) listState.scrollToItem((idx - 1).coerceAtLeast(0))
+        val idx = items.indexOfFirst { it is RItem.V && it.book == t.first.book && it.chapter == t.first.chapter && it.v.verse == t.first.verse }
+        if (idx >= 0) listState.scrollToItem((idx + offset - 1).coerceAtLeast(0))
     }
+
+    // Lectura en voz alta del capítulo visible
+    val speakKey = "cap:$book:$chapter:${settings.version}"
+    val speakingKey by c.speaker.speaking.collectAsState()
+    val speakingIdx by c.speaker.current.collectAsState()
+    val isSpeaking = speakingKey == speakKey
+    val speakBlock = blocks.firstOrNull { it.book == book && it.chapter == chapter }
+    DisposableEffect(Unit) { onDispose { if (c.speaker.speaking.value?.startsWith("cap:") == true) c.speaker.stop() } }
+    LaunchedEffect(speakingIdx) {
+        if (isSpeaking && speakingIdx > 0) {
+            val v = speakBlock?.verses?.getOrNull(speakingIdx - 1) ?: return@LaunchedEffect
+            val idx = items.indexOfFirst { it is RItem.V && it.book == book && it.chapter == chapter && it.v.verse == v.verse }
+            if (idx >= 0) listState.animateScrollToItem((idx + offset - 1).coerceAtLeast(0))
+        }
+    }
+
+    fun go(b: Int, ch: Int, verse: Int = 0) {
+        selection = emptySet(); startBook = b; startChapter = ch
+        target = if (verse > 0) VKey(b, ch, verse) to verse else null
+        scope.launch { listState.scrollToItem(0) }
+    }
+    fun next() { nextOf(book, chapter)?.let { go(it.first, it.second) } }
+    fun prev() { prevOf(book, chapter)?.let { go(it.first, it.second) } }
+    val selVerses = selection.map { it.verse }.sorted()
+    val selBook = selection.firstOrNull()?.book ?: book
+    val selChapter = selection.firstOrNull()?.chapter ?: chapter
+    val selBlock = blocks.firstOrNull { it.book == selBook && it.chapter == selChapter }
 
     Scaffold(
         topBar = {
@@ -136,22 +203,24 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                             Text("Versión principal", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 12.dp))
                             c.content.versions.forEach { v ->
                                 DropdownMenuItem(text = { Text("${v.id} — ${v.name}") }, leadingIcon = { if (v.id == settings.version) Icon(Icons.Filled.Check, null) },
-                                    onClick = { versionMenu = false; scope.launch { c.settings.update { it.copy(version = v.id) } } })
+                                    onClick = { versionMenu = false; startBook = book; startChapter = chapter; scope.launch { c.settings.update { it.copy(version = v.id) } } })
                             }
                             HorizontalDivider()
+                            DropdownMenuItem(text = { Text(if (continuous) "Lectura por capítulos" else "Lectura continua") }, leadingIcon = { Icon(Icons.Filled.ViewStream, null) },
+                                onClick = { versionMenu = false; startBook = book; startChapter = chapter; scope.launch { c.settings.update { it.copy(continuous = !it.continuous) } } })
                             DropdownMenuItem(text = { Text(if (settings.parallel) "Desactivar vista paralela" else "Vista paralela (comparar)") }, leadingIcon = { Icon(Icons.Filled.VerticalSplit, null) },
-                                onClick = { versionMenu = false; scope.launch { c.settings.update { it.copy(parallel = !it.parallel) } } })
+                                onClick = { versionMenu = false; startBook = book; startChapter = chapter; scope.launch { c.settings.update { it.copy(parallel = !it.parallel) } } })
                             if (settings.parallel) {
                                 Text("Versión paralela", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 12.dp))
                                 c.content.versions.filter { it.id != settings.version }.forEach { v ->
                                     DropdownMenuItem(text = { Text(v.id) }, leadingIcon = { if (v.id == settings.parallelVersion) Icon(Icons.Filled.Check, null) },
-                                        onClick = { versionMenu = false; scope.launch { c.settings.update { it.copy(parallelVersion = v.id) } } })
+                                        onClick = { versionMenu = false; startBook = book; startChapter = chapter; scope.launch { c.settings.update { it.copy(parallelVersion = v.id) } } })
                                 }
                             }
                         }
                     }
                     IconButton(onClick = {
-                        val vs = data?.verses.orEmpty()
+                        val vs = speakBlock?.verses.orEmpty()
                         c.speaker.toggle(speakKey, listOf("${bk.name}, capítulo $chapter.") + vs.map { it.text })
                     }) { Icon(if (isSpeaking) Icons.Filled.StopCircle else Icons.Filled.VolumeUp, if (isSpeaking) "Detener lectura" else "Escuchar capítulo") }
                     IconButton(onClick = { nav.navigate("search") }) { Icon(Icons.Filled.Search, "Buscar") }
@@ -162,24 +231,24 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
         bottomBar = {
             if (selection.isNotEmpty()) SelectionBar(
                 count = selection.size,
-                onColor = { color -> scope.launch { selection.forEach { v -> c.user.setHighlight(book, chapter, v, color) }; selection = emptySet() } },
+                onColor = { color -> scope.launch { selection.forEach { k -> c.user.setHighlight(k.book, k.chapter, k.verse, color) }; selection = emptySet() } },
                 onAction = { a ->
-                    val sorted = selection.sorted()
-                    val ref = PassageRef(book, chapter, sorted.first(), chapter, sorted.last())
+                    val ref = PassageRef(selBook, selChapter, selVerses.first(), selChapter, selVerses.last())
                     when (a) {
                         "notes" -> sheet = "notes"
                         "note" -> sheet = "note"
                         "topic" -> sheet = "topic"
                         "tag" -> sheet = "tag"
-                        "compare" -> nav.navigate("compare/$book/$chapter/${sorted.first()}")
+                        "words" -> sheet = "words"
+                        "compare" -> nav.navigate("compare/$selBook/$selChapter/${selVerses.first()}")
                         "study" -> nav.newStudy(ref)
                         "memory" -> scope.launch {
-                            val r = c.user.addMemory(book, chapter, sorted.first(), sorted.last())
+                            val r = c.user.addMemory(selBook, selChapter, selVerses.first(), selVerses.last())
                             Toast.makeText(ctx, if (r == -1L) "Ya está en tu lista de memorización" else "Añadido a Memorizar", Toast.LENGTH_SHORT).show()
                             selection = emptySet()
                         }
                         "copy", "share" -> {
-                            val txt = data?.verses?.filter { it.verse in selection }?.joinToString(" ") { "${it.verse} ${it.text}" } ?: ""
+                            val txt = selBlock?.verses?.filter { it.verse in selVerses }?.joinToString(" ") { "${it.verse} ${it.text}" } ?: ""
                             val full = "«$txt» — ${c.content.label(ref)} (${settings.version})"
                             if (a == "copy") {
                                 (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("versículo", full))
@@ -188,8 +257,9 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                             selection = emptySet()
                         }
                         "bookmark" -> scope.launch {
-                            val v = sorted.first()
-                            if (v in bmSet) c.user.dao.deleteBookmark(book, chapter, v) else c.user.dao.addBookmark(com.biblia.estudio.data.user.Bookmark(book = book, chapter = chapter, verse = v))
+                            val v = selVerses.first()
+                            if (key(selBook, selChapter, v) in bmSet) c.user.dao.deleteBookmark(selBook, selChapter, v)
+                            else c.user.dao.addBookmark(com.biblia.estudio.data.user.Bookmark(book = selBook, chapter = selChapter, verse = v))
                             selection = emptySet()
                         }
                         "clear" -> selection = emptySet()
@@ -198,78 +268,111 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
             )
         }
     ) { pad ->
-        val d = data
-        if (d == null) { Box(Modifier.padding(pad).fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }; return@Scaffold }
+        if (blocks.isEmpty()) { Box(Modifier.padding(pad).fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }; return@Scaffold }
         var dragX by remember { mutableFloatStateOf(0f) }
-        LazyColumn(state = listState, modifier = Modifier.padding(pad).fillMaxSize().pointerInput(book, chapter) {
-                detectHorizontalDragGestures(
+        LazyColumn(state = listState, modifier = Modifier.padding(pad).fillMaxSize().pointerInput(continuous, book, chapter) {
+                if (!continuous) detectHorizontalDragGestures(
                     onDragStart = { dragX = 0f },
                     onDragEnd = { if (dragX < -180f) next() else if (dragX > 180f) prev(); dragX = 0f },
                     onDragCancel = { dragX = 0f },
                     onHorizontalDrag = { _, dx -> dragX += dx }
                 )
             }, contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 24.dp)) {
-            item {
-                Text("${bk.name} $chapter", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), textAlign = TextAlign.Center)
-                if (chapter == 1) TextButton(onClick = { nav.navigate("intro/$book") }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Info, null); Spacer(Modifier.width(6.dp)); Text("Introducción a ${bk.name} (MacArthur)")
-                }
+            if (continuous) item {
+                val p = prevOf(blocks.first().book, blocks.first().chapter)
+                if (p != null) TextButton(onClick = { go(p.first, p.second) }, modifier = Modifier.fillMaxWidth()) { Text("↑ ${c.content.book(p.first).name} ${p.second}") }
             }
-            items(items) { it ->
+            items(items, key = { when (it) {
+                is RItem.Title -> "t${it.book}.${it.chapter}"
+                is RItem.Head -> "h${it.book}.${it.chapter}.${it.h.beforeVerse}.${it.idx}"
+                is RItem.V -> "v${it.book}.${it.chapter}.${it.v.verse}"
+                is RItem.End -> "e${it.book}.${it.chapter}"
+            } }) { it ->
                 when (it) {
-                    is Heading -> Text(it.text,
-                        style = if (it.kind == "label") MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif) else MaterialTheme.typography.titleSmall,
-                        color = if (it.kind == "label") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                    is RItem.Title -> {
+                        Column {
+                            Text("${c.content.book(it.book).name} ${it.chapter}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp), textAlign = TextAlign.Center)
+                            if (it.chapter == 1) TextButton(onClick = { nav.navigate("intro/${it.book}") }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Filled.Info, null); Spacer(Modifier.width(6.dp)); Text("Introducción a ${c.content.book(it.book).name} (MacArthur)")
+                            }
+                        }
+                    }
+                    is RItem.Head -> Text(it.h.text,
+                        style = if (it.h.kind == "label") MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif) else MaterialTheme.typography.titleSmall,
+                        color = if (it.h.kind == "label") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
-                    is Verse -> VerseRow(
-                        v = it, settings = settings, parallel = d.parallel[it.verse],
-                        highlight = hl[it.verse], selected = it.verse in selection,
-                        speaking = isSpeaking && speakingIdx - 1 == d.verses.indexOf(it),
-                        targeted = target?.let { t -> it.verse in t.first..t.second } == true,
-                        hasStudyNote = settings.showNoteMarkers && it.verse in d.noteVerses,
-                        hasNote = noteMap.containsKey(it.verse), bookmarked = it.verse in bmSet, tagged = it.verse in taggedSet,
-                        onClick = { selection = if (it.verse in selection) selection - it.verse else selection + it.verse },
-                        onStudyNote = { selection = setOf(it.verse); sheet = "notes" }
-                    )
+                    is RItem.V -> {
+                        val k = key(it.book, it.chapter, it.v.verse)
+                        val blk = blocks.firstOrNull { b -> b.book == it.book && b.chapter == it.chapter }
+                        val vk = VKey(it.book, it.chapter, it.v.verse)
+                        VerseRow(
+                            v = it.v, settings = settings, parallel = blk?.parallel?.get(it.v.verse),
+                            highlight = hl[k], words = wordMap[k].orEmpty(), selected = vk in selection,
+                            speaking = isSpeaking && it.book == book && it.chapter == chapter && speakingIdx - 1 == (speakBlock?.verses?.indexOf(it.v) ?: -2),
+                            targeted = target?.let { t -> t.first.book == it.book && t.first.chapter == it.chapter && it.v.verse in t.first.verse..t.second } == true,
+                            hasStudyNote = settings.showNoteMarkers && blk != null && it.v.verse in blk.noteVerses,
+                            hasNote = noteMap.containsKey(k), bookmarked = k in bmSet, tagged = k in taggedSet,
+                            onClick = {
+                                selection = when {
+                                    vk in selection -> selection - vk
+                                    selection.any { s -> s.book != it.book || s.chapter != it.chapter } -> setOf(vk)
+                                    else -> selection + vk
+                                }
+                            },
+                            onStudyNote = { selection = setOf(vk); sheet = "notes" }
+                        )
+                    }
+                    is RItem.End -> {
+                        val read = (it.book * 1000 + it.chapter) in readSet
+                        Column(Modifier.padding(top = 16.dp, bottom = if (continuous) 8.dp else 0.dp)) {
+                            if (read) OutlinedButton(onClick = { scope.launch { c.user.markChapterRead(it.book, it.chapter, false) } }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Filled.CheckCircle, null); Spacer(Modifier.width(8.dp)); Text(if (continuous) "${c.content.book(it.book).name} ${it.chapter} leído" else "Capítulo leído")
+                            } else Button(onClick = { scope.launch { c.user.markChapterRead(it.book, it.chapter, true); Toast.makeText(ctx, "+10 puntos", Toast.LENGTH_SHORT).show() } }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Filled.Done, null); Spacer(Modifier.width(8.dp)); Text(if (continuous) "Marcar ${c.content.book(it.book).name} ${it.chapter} como leído" else "Marcar como leído")
+                            }
+                            if (!continuous) {
+                                Row(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                                    OutlinedButton(onClick = { prev() }, enabled = prevOf(it.book, it.chapter) != null) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null); Text(" Anterior") }
+                                    Spacer(Modifier.weight(1f))
+                                    OutlinedButton(onClick = { next() }, enabled = nextOf(it.book, it.chapter) != null) { Text("Siguiente "); Icon(Icons.AutoMirrored.Filled.ArrowForward, null) }
+                                }
+                                val copyright = c.content.versions.firstOrNull { v -> v.id == settings.version }?.copyright.orEmpty()
+                                Text(copyright, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(top = 16.dp))
+                            } else HorizontalDivider(Modifier.padding(top = 16.dp))
+                        }
+                    }
                 }
             }
-            item {
-                Spacer(Modifier.height(20.dp))
-                val read = isRead > 0
-                if (read) OutlinedButton(onClick = { scope.launch { c.user.markChapterRead(book, chapter, false) } }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.CheckCircle, null); Spacer(Modifier.width(8.dp)); Text("Capítulo leído")
-                } else Button(onClick = { scope.launch { c.user.markChapterRead(book, chapter, true); Toast.makeText(ctx, "+10 puntos", Toast.LENGTH_SHORT).show() } }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.Done, null); Spacer(Modifier.width(8.dp)); Text("Marcar como leído")
-                }
-                Row(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                    OutlinedButton(onClick = { prev() }, enabled = book > 1 || chapter > 1) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null); Text(" Anterior") }
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(onClick = { next() }, enabled = book < 66 || chapter < bk.chapters) { Text("Siguiente "); Icon(Icons.AutoMirrored.Filled.ArrowForward, null) }
-                }
-                val copyright = c.content.versions.firstOrNull { it.id == settings.version }?.copyright.orEmpty()
-                Text(copyright, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(top = 16.dp))
-            }
+            if (continuous && loadingMore) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
         }
     }
 
     if (showPicker) BookChapterPicker(c.content.books, book, onDismiss = { showPicker = false }, pickVerse = true) { b, ch, v ->
-        showPicker = false; go(b, ch)
-        if (v > 0) target = v to v
+        showPicker = false; go(b, ch, v)
     }
-    val first = selection.minOrNull()
+    val first = selVerses.firstOrNull()
     when (sheet) {
-        "notes" -> if (first != null) StudyNotesSheet(book, chapter, first, onDismiss = { sheet = null }, onRef = { previewRef = it },
-            onOpenCommentary = { sheet = null; nav.navigate("commentary/$book/$chapter") })
-        "note" -> if (first != null) NoteDialog(book, chapter, first, noteMap[first]?.firstOrNull(), onDismiss = { sheet = null; selection = emptySet() })
-        "topic" -> if (first != null) TopicPickerDialog(book, chapter, selection.sorted(), onDismiss = { sheet = null; selection = emptySet() })
-        "tag" -> if (first != null) TagPickerDialog(book, chapter, selection.sorted(), onDismiss = { sheet = null; selection = emptySet() })
+        "notes" -> if (first != null) StudyNotesSheet(selBook, selChapter, first, onDismiss = { sheet = null }, onRef = { previewRef = it },
+            onOpenCommentary = { sheet = null; nav.navigate("commentary/$selBook/$selChapter") })
+        "note" -> if (first != null) NoteDialog(selBook, selChapter, first, noteMap[key(selBook, selChapter, first)]?.firstOrNull(), onDismiss = { sheet = null; selection = emptySet() })
+        "topic" -> if (first != null) TopicPickerDialog(selBook, selChapter, selVerses, onDismiss = { sheet = null; selection = emptySet() })
+        "tag" -> if (first != null) TagPickerDialog(selBook, selChapter, selVerses, onDismiss = { sheet = null; selection = emptySet() })
+        "words" -> if (first != null) selBlock?.verses?.firstOrNull { it.verse == first }?.let { v ->
+            WordHighlightDialog(settings.version, v, wordMap[key(selBook, selChapter, first)].orEmpty(),
+                onDismiss = { sheet = null; selection = emptySet() },
+                onDictionary = { w -> sheet = null; selection = emptySet(); nav.navigate("dictionary?q=${android.net.Uri.encode(w)}") })
+        }
     }
     previewRef?.let { r -> RefPreviewDialog(r, onDismiss = { previewRef = null }, onOpen = { sheet = null; nav.openRef(it) }) }
 }
 
+/** Separa el texto en palabras conservando la puntuación pegada a cada una. */
+fun splitWords(text: String): List<String> = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+
 @Composable
 private fun VerseRow(
-    v: Verse, settings: AppSettings, parallel: String?, highlight: Int?, selected: Boolean, targeted: Boolean, speaking: Boolean,
+    v: Verse, settings: AppSettings, parallel: String?, highlight: Int?, words: List<com.biblia.estudio.data.user.WordHighlight>,
+    selected: Boolean, targeted: Boolean, speaking: Boolean,
     hasStudyNote: Boolean, hasNote: Boolean, bookmarked: Boolean, tagged: Boolean, onClick: () -> Unit, onStudyNote: () -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
@@ -280,6 +383,7 @@ private fun VerseRow(
         else -> Color.Transparent
     }
     val style = verseTextStyle(settings.fontSize, settings.lineHeight)
+    val onDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Column(
         Modifier.fillMaxWidth().padding(top = if (v.para) 6.dp else 0.dp).clip(RoundedCornerShape(6.dp)).background(bg)
             .then(if (selected) Modifier.border(2.dp, primary, RoundedCornerShape(6.dp)) else Modifier)
@@ -287,7 +391,12 @@ private fun VerseRow(
     ) {
         Text(buildAnnotatedString {
             if (settings.showVerseNumbers) withStyle(SpanStyle(color = primary, fontWeight = FontWeight.Bold, fontSize = (settings.fontSize * 0.65f).sp, baselineShift = BaselineShift(0.3f))) { append(v.label + " ") }
-            append(v.text)
+            if (words.isEmpty()) append(v.text)
+            else splitWords(v.text).forEachIndexed { i, w ->
+                if (i > 0) append(" ")
+                val wh = words.firstOrNull { i in it.wordStart..it.wordEnd }
+                if (wh != null) withStyle(SpanStyle(background = Color(wh.color).copy(alpha = 0.75f), color = if (onDark) Color.Black else Color.Unspecified)) { append(w) } else append(w)
+            }
             if (bookmarked) withStyle(SpanStyle(color = primary)) { append("  🔖") }
             if (hasNote) withStyle(SpanStyle(color = primary)) { append("  ✎") }
             if (tagged) withStyle(SpanStyle(color = primary)) { append("  #") }
@@ -297,6 +406,64 @@ private fun VerseRow(
         if (hasStudyNote) Text("Nota de estudio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.clickable(onClick = onStudyNote).padding(vertical = 2.dp))
     }
+}
+
+/** Diálogo para resaltar palabras sueltas: se tocan las palabras y se elige un color. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WordHighlightDialog(version: String, v: Verse, existing: List<com.biblia.estudio.data.user.WordHighlight>, onDismiss: () -> Unit, onDictionary: (String) -> Unit) {
+    val c = LocalContext.current.app; val scope = rememberCoroutineScope()
+    val words = remember(v) { splitWords(v.text) }
+    // color por índice de palabra
+    var colors by remember(existing) { mutableStateOf(buildMap { existing.forEach { e -> (e.wordStart..e.wordEnd).forEach { put(it, e.color) } } }) }
+    var picked by remember { mutableStateOf(setOf<Int>()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Resaltar palabras · ${c.content.book(v.book).name} ${v.chapter}:${v.verse}") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Toca las palabras que quieres marcar y elige un color.", style = MaterialTheme.typography.bodySmall)
+                FlowRow(Modifier.padding(vertical = 8.dp)) {
+                    words.forEachIndexed { i, w ->
+                        val col = colors[i]
+                        FilterChip(
+                            selected = i in picked, onClick = { picked = if (i in picked) picked - i else picked + i },
+                            label = { Text(w, fontFamily = Serif) }, modifier = Modifier.padding(end = 4.dp),
+                            colors = if (col != null && i !in picked) FilterChipDefaults.filterChipColors(containerColor = Color(col).copy(alpha = 0.8f), labelColor = Color.Black) else FilterChipDefaults.filterChipColors()
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    HighlightColors.forEach { col ->
+                        Box(Modifier.padding(3.dp).size(30.dp).clip(CircleShape).background(Color(col)).clickable(enabled = picked.isNotEmpty()) {
+                            colors = colors + picked.associateWith { col }; picked = emptySet()
+                        })
+                    }
+                    IconButton(onClick = { colors = colors - picked; picked = emptySet() }, enabled = picked.isNotEmpty()) { Icon(Icons.Filled.FormatColorReset, "Quitar") }
+                }
+                if (picked.size == 1 || (picked.isNotEmpty() && picked.max() - picked.min() == picked.size - 1)) {
+                    val term = picked.sorted().joinToString(" ") { words[it] }.trim { !it.isLetter() }
+                    TextButton(onClick = { onDictionary(term) }) { Icon(Icons.Filled.Translate, null); Text("  Buscar «$term» en el diccionario") }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                scope.launch {
+                    // agrupar índices consecutivos del mismo color en rangos
+                    val ranges = mutableListOf<Triple<Int, Int, Int>>()
+                    colors.toSortedMap().forEach { (i, col) ->
+                        val last = ranges.lastOrNull()
+                        if (last != null && last.second == i - 1 && last.third == col) ranges[ranges.lastIndex] = Triple(last.first, i, col)
+                        else ranges.add(Triple(i, i, col))
+                    }
+                    c.user.setWordHighlights(version, v.book, v.chapter, v.verse, ranges)
+                    onDismiss()
+                }
+            }) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 @Composable
@@ -315,6 +482,7 @@ private fun SelectionBar(count: Int, onColor: (Int?) -> Unit, onAction: (String)
                     TextButton(onClick = { onAction(key) }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(icon, null); Text(label, style = MaterialTheme.typography.labelSmall) } }
                 A(Icons.AutoMirrored.Filled.MenuBook, "MacArthur", "notes")
                 A(Icons.Filled.EditNote, "Nota", "note")
+                A(Icons.Filled.FormatColorText, "Palabras", "words")
                 A(Icons.Filled.FolderSpecial, "Tema", "topic")
                 A(Icons.AutoMirrored.Filled.Label, "Etiqueta", "tag")
                 A(Icons.Filled.CompareArrows, "Comparar", "compare")
