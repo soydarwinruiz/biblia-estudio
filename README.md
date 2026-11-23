@@ -31,6 +31,9 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Preguntas**: 5 diarias (deterministas por fecha) y práctica libre por categoría.
 - **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
+## Instalar el APK
+Descarga [`apk/biblia-estudio-1.0-debug.apk`](apk/biblia-estudio-1.0-debug.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+
 ## Compilar
 Requisitos: JDK 17+, Android SDK (plataforma 35) y Gradle 8.9 o superior.
 ```bash
