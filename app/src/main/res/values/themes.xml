@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Biblia" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">#FFFBF5</item>
+    </style>
+</resources>
