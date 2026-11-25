@@ -1,6 +1,10 @@
 package com.biblia.estudio.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -11,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.biblia.estudio.data.prefs.ReaderFont
 import com.biblia.estudio.data.prefs.ThemeMode
 
 private val Brown = Color(0xFF7A4A1E)
@@ -39,9 +44,16 @@ private val Dark = darkColorScheme(
 val Serif = FontFamily.Serif
 
 @Composable
-fun BibliaTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+fun BibliaTheme(mode: ThemeMode, dynamicColor: Boolean = false, content: @Composable () -> Unit) {
     val dark = when (mode) { ThemeMode.SYSTEM -> isSystemInDarkTheme(); ThemeMode.DARK -> true; else -> false }
-    val scheme = when { mode == ThemeMode.SEPIA -> Sepia; dark -> Dark; else -> Light }
+    val ctx = LocalContext.current
+    val scheme = when {
+        mode == ThemeMode.SEPIA -> Sepia
+        // Material You: colores tomados del fondo de pantalla (Android 12+)
+        dynamicColor && Build.VERSION.SDK_INT >= 31 -> if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
+        dark -> Dark
+        else -> Light
+    }
     val base = Typography()
     val typo = base.copy(
         headlineSmall = base.headlineSmall.copy(fontFamily = Serif, fontWeight = FontWeight.SemiBold),
@@ -55,4 +67,5 @@ val HighlightColors = listOf(0xFFFFF176.toInt(), 0xFFA5D6A7.toInt(), 0xFF90CAF9.
 val HighlightNames = listOf("Amarillo", "Verde", "Azul", "Rosa", "Naranja", "Violeta")
 val TopicColors = listOf(0xFF7A4A1E.toInt(), 0xFF2E7D32.toInt(), 0xFF1565C0.toInt(), 0xFFAD1457.toInt(), 0xFFEF6C00.toInt(), 0xFF6A1B9A.toInt(), 0xFF00838F.toInt(), 0xFF5D4037.toInt())
 
-fun verseTextStyle(size: Float, lineHeight: Float) = TextStyle(fontFamily = Serif, fontSize = size.sp, lineHeight = (size * lineHeight).sp)
+fun verseTextStyle(size: Float, lineHeight: Float, font: ReaderFont = ReaderFont.SERIF) =
+    TextStyle(fontFamily = if (font == ReaderFont.SANS) FontFamily.SansSerif else Serif, fontSize = size.sp, lineHeight = (size * lineHeight).sp)

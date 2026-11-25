@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="continue" android:enabled="true" android:icon="@drawable/ic_shortcut_book"
+        android:shortcutShortLabel="@string/sc_continue" android:shortcutLongLabel="@string/sc_continue_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.biblia.estudio" android:targetClass="com.biblia.estudio.MainActivity" android:data="codicevivo://reader" />
+    </shortcut>
+    <shortcut android:shortcutId="search" android:enabled="true" android:icon="@drawable/ic_shortcut_search"
+        android:shortcutShortLabel="@string/sc_search" android:shortcutLongLabel="@string/sc_search">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.biblia.estudio" android:targetClass="com.biblia.estudio.MainActivity" android:data="codicevivo://search" />
+    </shortcut>
+    <shortcut android:shortcutId="memory" android:enabled="true" android:icon="@drawable/ic_shortcut_memory"
+        android:shortcutShortLabel="@string/sc_memory" android:shortcutLongLabel="@string/sc_memory_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.biblia.estudio" android:targetClass="com.biblia.estudio.MainActivity" android:data="codicevivo://memory" />
+    </shortcut>
+    <shortcut android:shortcutId="journal" android:enabled="true" android:icon="@drawable/ic_shortcut_journal"
+        android:shortcutShortLabel="@string/sc_journal" android:shortcutLongLabel="@string/sc_journal_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.biblia.estudio" android:targetClass="com.biblia.estudio.MainActivity" android:data="codicevivo://journal" />
+    </shortcut>
+</shortcuts>

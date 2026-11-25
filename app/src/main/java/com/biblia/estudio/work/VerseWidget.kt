@@ -53,6 +53,7 @@ class VerseWidget : AppWidgetProvider() {
             val m = AppWidgetManager.getInstance(context)
             val ids = m.getAppWidgetIds(ComponentName(context, VerseWidget::class.java))
             if (ids.isNotEmpty()) render(context, m, ids)
+            runCatching { ProgressWidget.refreshAll(context) }
         }
     }
 }

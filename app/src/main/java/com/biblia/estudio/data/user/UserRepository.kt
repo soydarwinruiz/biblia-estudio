@@ -19,13 +19,14 @@ fun today(): Long = LocalDate.now().toEpochDay()
 
 @Serializable
 data class Backup(
-    val app: String = "BibliaEstudio", val version: Int = 1, val created: Long = System.currentTimeMillis(),
+    val app: String = "BibliaEstudio", val version: Int = 2, val created: Long = System.currentTimeMillis(),
     val highlights: List<Highlight>, val notes: List<VerseNote>, val bookmarks: List<Bookmark>,
     val topics: List<UserTopic>, val topicVerses: List<TopicVerse>, val tags: List<Tag>, val tagVerses: List<TagVerse>,
     val chaptersRead: List<ChapterRead>, val enrollments: List<PlanEnrollment>, val planDays: List<PlanDayDone>,
     val activity: List<ActivityDay>, val quizDays: List<QuizDay>, val devotional: List<DevotionalDone>, val studies: List<Study>,
     val reflections: List<LessonReflection> = emptyList(), val memory: List<MemoryVerse> = emptyList(),
-    val wordHighlights: List<WordHighlight> = emptyList()
+    val wordHighlights: List<WordHighlight> = emptyList(),
+    val journal: List<JournalEntry> = emptyList()
 )
 
 class UserRepository(private val db: UserDatabase) {
@@ -88,18 +89,18 @@ class UserRepository(private val db: UserDatabase) {
 
     suspend fun deleteTag(id: Long) = db.withTransaction { dao.deleteTagVerses(id); dao.deleteTag(id) }
 
-    /** Intervalos (días) de cada caja del sistema Leitner. */
-    private val memoryIntervals = listOf(1, 2, 4, 7, 15, 30, 60)
-
     suspend fun addMemory(book: Int, chapter: Int, verse: Int, verseEnd: Int) =
         dao.addMemory(MemoryVerse(book = book, chapter = chapter, verse = verse, verseEnd = verseEnd, nextReview = today()))
 
-    /** Registra un repaso: si lo sabía sube de caja; si no, vuelve a la primera. */
-    suspend fun reviewMemory(m: MemoryVerse, knew: Boolean) {
-        val box = if (knew) (m.box + 1).coerceAtMost(memoryIntervals.lastIndex) else 0
-        dao.upsertMemory(m.copy(box = box, nextReview = today() + memoryIntervals[box], reviews = m.reviews + 1))
-        if (knew) addPoints(Points.MEMORY)
+    /** Registra un repaso con el algoritmo SM-2 (calidad 0..3: otra vez, difícil, bien, fácil). */
+    suspend fun reviewMemory(m: MemoryVerse, grade: Int) {
+        val next = Sm2.review(m, grade, today())
+        dao.upsertMemory(next)
+        if (grade >= Sm2.HARD) addPoints(Points.MEMORY)
     }
+
+    /** Compatibilidad: «lo sabía» = bien, «no lo sabía» = otra vez. */
+    suspend fun reviewMemory(m: MemoryVerse, knew: Boolean) = reviewMemory(m, if (knew) Sm2.GOOD else Sm2.AGAIN)
 
     /** Reemplaza los resaltados de palabras de un versículo. ranges = pares (inicio, fin) de índices de palabra con su color. */
     suspend fun setWordHighlights(version: String, book: Int, chapter: Int, verse: Int, ranges: List<Triple<Int, Int, Int>>) = db.withTransaction {
@@ -112,7 +113,8 @@ class UserRepository(private val db: UserDatabase) {
         topics = dao.dumpTopics(), topicVerses = dao.dumpTopicVerses(), tags = dao.dumpTags(), tagVerses = dao.dumpTagVerses(),
         chaptersRead = dao.dumpChaptersRead(), enrollments = dao.dumpEnrollments(), planDays = dao.dumpPlanDays(),
         activity = dao.dumpActivity(), quizDays = dao.dumpQuizDays(), devotional = dao.dumpDevotional(), studies = dao.dumpStudies(),
-        reflections = dao.dumpReflections(), memory = dao.dumpMemory(), wordHighlights = dao.dumpWordHighlights()
+        reflections = dao.dumpReflections(), memory = dao.dumpMemory(), wordHighlights = dao.dumpWordHighlights(),
+        journal = dao.dumpJournal()
     ))
 
     /** Restaura un respaldo reemplazando todos los datos personales. */
@@ -124,7 +126,7 @@ class UserRepository(private val db: UserDatabase) {
             dao.insTopics(b.topics); dao.insTopicVerses(b.topicVerses); dao.insTags(b.tags); dao.insTagVerses(b.tagVerses)
             dao.insChaptersRead(b.chaptersRead); dao.insEnrollments(b.enrollments); dao.insPlanDays(b.planDays)
             dao.insActivity(b.activity); dao.insQuizDays(b.quizDays); dao.insDevotional(b.devotional); dao.insStudies(b.studies)
-            dao.insReflections(b.reflections); dao.insMemory(b.memory); dao.insWordHighlights(b.wordHighlights)
+            dao.insReflections(b.reflections); dao.insMemory(b.memory); dao.insWordHighlights(b.wordHighlights); dao.insJournal(b.journal)
         }
         return b.highlights.size + b.notes.size + b.topicVerses.size + b.studies.size
     }

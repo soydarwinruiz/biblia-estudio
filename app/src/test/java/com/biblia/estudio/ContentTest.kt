@@ -75,4 +75,36 @@ class ContentTest {
         assertEquals(1, u.dao.dumpTopicVerses().size)
         assertTrue(u.dao.dumpActivity().sumOf { it.points } >= 10 + 40)
     }
+
+    @Test fun journalAndMemoryInBackup() = runBlocking {
+        c.init()
+        val u = c.user
+        u.dao.upsertJournal(com.biblia.estudio.data.user.JournalEntry(kind = "prayer", title = "Salud de mamá", book = 59, chapter = 5, verse = 16))
+        u.addMemory(19, 23, 1, 1)
+        val m = u.dao.dueMemory(com.biblia.estudio.data.user.today()).first()
+        u.reviewMemory(m, com.biblia.estudio.data.user.Sm2.GOOD)
+        val json = u.exportJson()
+        u.importJson(json)
+        assertEquals("Salud de mamá", u.dao.dumpJournal().single().title)
+        val after = u.dao.dumpMemory().single()
+        assertEquals(1, after.interval)
+        assertEquals(1, after.reviews)
+        assertEquals(1, u.dao.searchJournal("mamá").size)
+        // Respaldos antiguos (sin «journal» ni campos SM-2) siguen siendo válidos
+        val old = json.replace(Regex(",\\s*\"journal\":\\s*\\[[^\\]]*\\]"), "")
+        u.importJson(old)
+        assertTrue(u.dao.dumpJournal().isEmpty())
+    }
+
+    @Test fun phraseSearch() = runBlocking {
+        c.init()
+        val content = c.content
+        assertEquals("\"de tal manera\"", content.ftsQuery("de tal manera", true))
+        assertEquals("gracia* fe*", content.ftsQuery("gracia fe", false))
+        val exact = content.search("tal manera amo", "RVR1960", null, null, exact = true)
+        assertTrue(exact.any { it.book == 43 && it.chapter == 3 && it.verse == 16 })
+        val loose = content.search("manera amo tal", "RVR1960", null, null)
+        val strict = content.search("manera amo tal", "RVR1960", null, null, exact = true)
+        assertTrue(loose.size > strict.size)
+    }
 }

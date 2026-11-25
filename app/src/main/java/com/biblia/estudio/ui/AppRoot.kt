@@ -42,15 +42,23 @@ private val tabs = listOf(
 /** Ajustes actuales, accesibles desde cualquier pantalla y siempre al día. */
 val LocalSettings = compositionLocalOf { AppSettings() }
 
-fun NavController.openRef(ref: PassageRef) =
-    navigate("reader?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ve=${if (ref.chapterEnd == ref.chapter) ref.verseEnd else 999}") { launchSingleTop = true }
+fun refRoute(ref: PassageRef) = "reader?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ve=${if (ref.chapterEnd == ref.chapter) ref.verseEnd else 999}"
+
+fun NavController.openRef(ref: PassageRef) = navigate(refRoute(ref)) { launchSingleTop = true }
+
+fun NavController.openPulpit(ref: PassageRef) =
+    navigate("pulpit?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ce=${ref.chapterEnd}&ve=${ref.verseEnd}")
 
 fun NavController.newStudy(ref: PassageRef) =
     navigate("studyedit/0?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ce=${ref.chapterEnd}&ve=${ref.verseEnd}")
 
 @Composable
-fun AppRoot(settings: AppSettings) {
+fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalConsumed: () -> Unit = {}) {
     val nav = rememberNavController()
+    // Destinos pedidos desde fuera de la app (atajos, widgets, «Compartir»)
+    androidx.compose.runtime.LaunchedEffect(externalRoute) {
+        if (externalRoute != null) { nav.navigate(externalRoute) { launchSingleTop = true }; onExternalConsumed() }
+    }
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "today"
     val showBar = tabs.any { route.substringBefore("?") == it.route }
@@ -120,6 +128,18 @@ fun AppRoot(settings: AppSettings) {
             composable("prayer?o={o}", arguments = listOf(navArgument("o") { type = NavType.IntType; defaultValue = 0 })) { e -> PrayerScreen(nav, LocalSettings.current, e.arguments!!.getInt("o")) }
             composable("memory") { MemoryScreen(nav, LocalSettings.current) }
             composable("settings") { SettingsScreen(nav, LocalSettings.current) }
+            composable("journal") { JournalScreen(nav) }
+            composable("journal/{id}?kind={kind}&b={b}&c={c}&v={v}", arguments = listOf(
+                navArgument("id") { type = NavType.LongType }, navArgument("kind") { type = NavType.StringType; defaultValue = "prayer" },
+                navArgument("b") { type = NavType.IntType; defaultValue = 0 }, navArgument("c") { type = NavType.IntType; defaultValue = 0 }, navArgument("v") { type = NavType.IntType; defaultValue = 0 },
+            )) { e -> val a = e.arguments!!; JournalEditScreen(nav, a.getLong("id"), a.getString("kind") ?: "prayer", PassageRef(a.getInt("b"), a.getInt("c"), a.getInt("v"))) }
+            composable(
+                "pulpit?b={b}&c={c}&v={v}&ce={ce}&ve={ve}",
+                arguments = listOf("b", "c", "v", "ce", "ve").map { k -> navArgument(k) { type = NavType.IntType; defaultValue = 0 } }
+            ) { e ->
+                val a = e.arguments!!
+                PulpitScreen(nav, LocalSettings.current, PassageRef(a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ce"), a.getInt("ve")))
+            }
         }
         }
     }

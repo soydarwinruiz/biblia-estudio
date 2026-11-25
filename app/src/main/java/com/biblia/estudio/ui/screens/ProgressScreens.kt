@@ -181,6 +181,14 @@ fun PlanScreen(nav: NavController, id: Int) {
                     else {
                         LinearProgressIndicator(progress = { doneSet.size.toFloat() / p.days }, modifier = Modifier.fillMaxWidth())
                         Text("${doneSet.size} de ${p.days} días completados", style = MaterialTheme.typography.labelMedium)
+                        // Si vas atrasado, el plan se puede reprogramar para que «hoy» sea el primer día pendiente.
+                        val firstPending = (1..p.days).firstOrNull { it !in doneSet }
+                        if (firstPending != null && firstPending < currentDay) {
+                            Text("Vas ${currentDay - firstPending} día${if (currentDay - firstPending > 1) "s" else ""} atrasado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
+                            OutlinedButton(onClick = { scope.launch { c.user.dao.upsertEnrollment(enrolled.copy(startDay = today() - (firstPending - 1))) } }) {
+                                Text("Reprogramar: hoy = día $firstPending")
+                            }
+                        }
                         TextButton(onClick = { confirmLeave = true }) { Text("Abandonar / reiniciar plan") }
                     }
                 }

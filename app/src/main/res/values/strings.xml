@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">Códice vivo</string>
     <string name="widget_desc">Versículo del día</string>
+    <string name="widget_progress_desc">Racha, plan de lectura y versículos por repasar</string>
+    <string name="sc_continue">Seguir leyendo</string>
+    <string name="sc_continue_long">Continuar donde lo dejé</string>
+    <string name="sc_search">Buscar</string>
+    <string name="sc_memory">Memorizar</string>
+    <string name="sc_memory_long">Repasar versículos</string>
+    <string name="sc_journal">Diario</string>
+    <string name="sc_journal_long">Diario de oración</string>
 </resources>

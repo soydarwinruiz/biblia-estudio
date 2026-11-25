@@ -37,20 +37,39 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Selector libro → capítulo → versículo** en el lector.
 - **Widget** de pantalla de inicio con el versículo del día.
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
-- **Ajustes**: tema claro, oscuro o sepia, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
+- **Ajustes**: tema claro, oscuro o sepia, colores del sistema (Material You), letra serif o sans, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
+
+### Novedades de la 1.5
+- **Diario**: peticiones de oración con «respondida» (fecha y cómo respondió Dios) y entradas de diario; se puede orar desde un versículo (botón «Orar» del lector).
+- **Respaldo automático** diario o semanal en una carpeta que elijas (se guardan las últimas 7 copias). La copia de Google del teléfono ahora sí incluye tus datos (antes la base de la Biblia, de ~110 MB, superaba el límite de 25 MB y no se respaldaba nada).
+- **Recordatorio puntual**: usa alarmas del sistema (antes WorkManager podía retrasarlo horas), se reprograma tras reiniciar el teléfono y se pide el permiso de notificaciones en la bienvenida.
+- **Pantalla de bienvenida** la primera vez: versión, tema y hora del recordatorio.
+- **Memorizar con SM-2**: cuatro respuestas (otra vez, difícil, bien, fácil) con intervalos adaptativos y modo **escribir de memoria** que corrige palabra por palabra.
+- **Búsqueda**: frase exacta, búsqueda en notas MacArthur y en tus notas, estudios y diario, historial de búsquedas. Además, la búsqueda por versión es mucho más rápida (de segundos a milisegundos).
+- **Audio**: elegir voz (México, EE. UU., España…) y velocidad, temporizador para dormir y seguir con el siguiente capítulo.
+- **Modo púlpito**: letra grande, pantalla siempre encendida y desplazamiento automático (desde el lector o un estudio).
+- **Imagen del versículo** para compartir (4 estilos) y **estudios en PDF**.
+- **Planes**: botón para reprogramar el plan si vas atrasado.
+- **Widget «Mi día»** (racha, lectura del plan y versículos por repasar), **accesos directos** al mantener pulsado el ícono, y **«Compartir» / seleccionar texto** en cualquier app con una cita (p. ej. «Juan 3:16») para abrirla en Códice vivo.
+- Lector más ligero: solo carga tus resaltados y notas de los capítulos visibles.
 
 ## Instalar el APK
-Descarga [`apk/codice-vivo-1.4.apk`](apk/codice-vivo-1.4.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
+Descarga el APK de la última versión en la sección **Releases** del repositorio, ábrelo en el teléfono y permite instalar apps de fuentes desconocidas.
+Se instala encima de la versión anterior sin perder datos (misma clave de firma).
+Los APK ya no se guardan dentro del repositorio: cada uno pesaba ~55 MB y engordaba el historial de git (la 1.4 sigue en `apk/` por compatibilidad).
 
 ## Firma
-El APK se firma con `keystore/biblia-release.jks` (contraseñas en `app/build.gradle.kts`). Usa siempre esta misma clave
-para que las actualizaciones se instalen sobre la versión anterior sin perder datos. Mantén el repositorio privado.
+El APK se firma con `keystore/biblia-release.jks`. Las contraseñas **ya no están en el código**: copia
+`keystore.properties.example` como `keystore.properties` (ignorado por git) y escríbelas ahí, o usa las variables de entorno
+`CODICE_STORE_PASSWORD` y `CODICE_KEY_PASSWORD`. Sin ellas, la versión de release sale sin firmar.
+Usa siempre esta misma clave para que las actualizaciones se instalen sobre la versión anterior sin perder datos. Mantén el repositorio privado.
 
 ## Compilar
-Requisitos: JDK 17+, Android SDK (plataforma 35) y Gradle 8.9 o superior.
+Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
-./gradlew assembleRelease      # o: gradle assembleRelease
-adb install app/build/outputs/apk/release/app-release.apk
+./gradlew assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+./gradlew testDebugUnitTest    # 20 pruebas: contenido, búsqueda, respaldo, migración de la base, SM-2 y pantallas
 ```
 
 ## Regenerar la base de contenido
@@ -69,7 +88,7 @@ tools/                       Scripts de Python que generan bible.db
 app/src/main/java/.../data   content/ (SQLite de solo lectura), user/ (Room: datos personales), prefs/ (DataStore)
 app/src/main/java/.../domain Analizador de referencias, gamificación y logros
 app/src/main/java/.../ui     Pantallas en Compose
-app/src/main/java/.../work   Notificación diaria (WorkManager)
+app/src/main/java/.../work   Recordatorio (AlarmManager), widgets y respaldo automático (WorkManager)
 ```
 
 ## Versión para iPhone
