@@ -54,9 +54,9 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - Lector más ligero: solo carga tus resaltados y notas de los capítulos visibles.
 
 ## Instalar el APK
-Descarga el APK de la última versión en la sección **Releases** del repositorio, ábrelo en el teléfono y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/codice-vivo-1.5.apk`](apk/codice-vivo-1.5.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
 Se instala encima de la versión anterior sin perder datos (misma clave de firma).
-Los APK ya no se guardan dentro del repositorio: cada uno pesaba ~55 MB y engordaba el historial de git (la 1.4 sigue en `apk/` por compatibilidad).
+Nota: cada APK pesa ~55 MB y engorda el historial de git; a futuro conviene publicarlos en **Releases** en vez de guardarlos aquí.
 
 ## Firma
 El APK se firma con `keystore/biblia-release.jks`. Las contraseñas **ya no están en el código**: copia
