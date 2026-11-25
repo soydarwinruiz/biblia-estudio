@@ -123,11 +123,19 @@ class ContentRepository(private val context: Context) {
         d.list("SELECT verse, verse_end, chapter_end FROM study_notes WHERE book=? AND chapter=?", book, chapter) { it.getInt(0) }.toSet()
     }
 
-    suspend fun search(query: String, version: String?, testament: String?, book: Int?, limit: Int = 300): List<SearchHit> = io {
-        val q = query.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-            .joinToString(" ") { w -> w.replace(Regex("[\"*():^-]"), "") + "*" }
+    /** Construye la consulta FTS: palabras con prefijo (todas deben aparecer) o una frase exacta. */
+    fun ftsQuery(query: String, exact: Boolean): String {
+        val words = query.trim().split(Regex("\\s+")).map { it.replace(Regex("[\"*():^-]"), "") }.filter { it.isNotBlank() }
+        if (words.isEmpty()) return ""
+        return if (exact) "\"" + words.joinToString(" ") + "\"" else words.joinToString(" ") { "$it*" }
+    }
+
+    suspend fun search(query: String, version: String?, testament: String?, book: Int?, limit: Int = 300, exact: Boolean = false): List<SearchHit> = io {
+        val q = ftsQuery(query, exact)
         if (q.isBlank()) return@io emptyList()
-        val sb = StringBuilder("SELECT v.version,v.book,v.chapter,v.verse,v.text FROM verses_fts f JOIN verses v ON v.id=f.docid WHERE verses_fts MATCH ?")
+        // CROSS JOIN obliga a SQLite a usar primero el índice de texto: sin él recorría todos los versículos
+        // de la versión y evaluaba MATCH en cada uno (segundos en vez de milisegundos).
+        val sb = StringBuilder("SELECT v.version,v.book,v.chapter,v.verse,v.text FROM verses_fts f CROSS JOIN verses v ON v.id=f.docid WHERE verses_fts MATCH ?")
         val args = mutableListOf<Any>(q)
         if (version != null) { sb.append(" AND v.version=?"); args.add(version) }
         if (testament != null) { sb.append(if (testament == "AT") " AND v.book<=39" else " AND v.book>=40") }
@@ -204,7 +212,7 @@ class ContentRepository(private val context: Context) {
 
     suspend fun countInBible(term: String, version: String = "RVR1960"): Int = io {
         val q = term.trim().split(Regex("\\s+")).joinToString(" ") { it.replace(Regex("[\"*():^-]"), "") }
-        if (q.isBlank()) 0 else d.list("SELECT COUNT(*) FROM verses_fts f JOIN verses v ON v.id=f.docid WHERE verses_fts MATCH ? AND v.version=?", "\"$q\"", version) { it.getInt(0) }.first()
+        if (q.isBlank()) 0 else d.list("SELECT COUNT(*) FROM verses_fts f CROSS JOIN verses v ON v.id=f.docid WHERE verses_fts MATCH ? AND v.version=?", "\"$q\"", version) { it.getInt(0) }.first()
     }
 
     suspend fun indexTopicFor(term: String): IndexTopic? = io {

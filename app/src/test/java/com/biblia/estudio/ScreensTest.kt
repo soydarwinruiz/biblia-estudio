@@ -23,7 +23,21 @@ class ScreensTest {
 
     /** Las preferencias persisten entre pruebas: empezar siempre en Juan 1 con tema claro. */
     private fun reset() = kotlinx.coroutines.runBlocking {
-        rule.activity.app.settings.update { it.copy(lastBook = 43, lastChapter = 1, theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT) }
+        val a = rule.activity.app
+        a.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT, onboarded = true) }
+        a.settings.setPosition(43, 1); a.position = com.biblia.estudio.data.prefs.ReadingPosition(43, 1)
+    }
+
+    /** La primera vez aparece la bienvenida: se captura y se marca como vista. */
+    private fun start() {
+        rule.waitUntil(60_000) {
+            rule.onAllNodesWithText("Empezar").fetchSemanticsNodes().isNotEmpty() || rule.onAllNodesWithText("Leer pasaje").fetchSemanticsNodes().isNotEmpty()
+        }
+        if (rule.onAllNodesWithText("Empezar").fetchSemanticsNodes().isNotEmpty()) {
+            shot("00_bienvenida")
+            kotlinx.coroutines.runBlocking { rule.activity.app.settings.update { it.copy(onboarded = true) } }
+        }
+        waitText("Leer pasaje")
     }
 
     private fun waitText(text: String, substring: Boolean = false) {
@@ -38,7 +52,7 @@ class ScreensTest {
     }
 
     @Test fun walkThroughScreens() {
-        waitText("Leer pasaje")
+        start()
         reset()
         shot("01_hoy")
         rule.activityRule.scenario.onActivity { a ->
@@ -83,6 +97,7 @@ class ScreensTest {
     }
 
     @Test fun quizAndStudy() {
+        start()
         waitText("Comenzar")
         rule.onNodeWithText("Comenzar").performScrollTo().performClick()
         waitText("Pregunta 1 de 5")
@@ -93,7 +108,7 @@ class ScreensTest {
     }
 
     @Test fun introAndStudyEditor() {
-        waitText("Leer pasaje")
+        start()
         reset()
         rule.onNodeWithText("Estudio").performClick()
         waitText("Nuevo estudio", true)
@@ -111,7 +126,7 @@ class ScreensTest {
     private val container get() = rule.activity.app
 
     @Test fun darkModeMemoryAndLesson() {
-        waitText("Leer pasaje")
+        start()
         reset()
         kotlinx.coroutines.runBlocking {
             container.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.DARK) }
@@ -126,7 +141,7 @@ class ScreensTest {
         rule.onNodeWithText("Pista").performClick()
         shot("14_memorizar")
         rule.onNodeWithText("Mostrar").performClick()
-        rule.onNodeWithText("¡Lo sé!").performClick()
+        rule.onNodeWithText("Bien").performClick()
         waitText("Repaso terminado")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -142,7 +157,7 @@ class ScreensTest {
     }
 
     @Test fun verseSelector() {
-        waitText("Leer pasaje")
+        start()
         reset()
         rule.onNodeWithText("Biblia").performClick()
         waitText("El Verbo hecho carne")
@@ -159,7 +174,7 @@ class ScreensTest {
     }
 
     @Test fun dictionaryWordsAndContinuous() {
-        waitText("Leer pasaje")
+        start()
         reset()
         // Diccionario desde Estudio
         rule.onNodeWithText("Estudio").performClick()
@@ -195,11 +210,80 @@ class ScreensTest {
         // Lectura continua
         rule.onNodeWithText("RVR1960").performClick()
         rule.onNodeWithText("Lectura continua").performClick()
-        Thread.sleep(800); rule.waitForIdle()
-        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Marcar Juan 1 como leído"))
+        try {
+            // Esperar a que el ajuste se guarde, que el lector recargue y que aparezca la lista continua
+            rule.waitUntil(20_000) { kotlinx.coroutines.runBlocking { rule.activity.app.settings.current().continuous } }
+            rule.waitForIdle()
+            rule.waitUntil(20_000) { rule.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
+            rule.waitForIdle()
+        } catch (e: Throwable) { rule.onRoot().captureRoboImage("build/shots/fallo_continua.png"); println(rule.onRoot().printToString(maxDepth = 12)); throw e }
+        try { rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Marcar Juan 1 como leído") or hasText("Juan 1 leído")) }
+        catch (e: Throwable) { rule.onRoot().captureRoboImage("build/shots/fallo_continua2.png"); println("ARBOL:\n" + rule.onRoot().printToString(maxDepth = 6)); throw e }
         rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Juan 2"))
         waitText("Juan 2")
         shot("22_lectura_continua")
         kotlinx.coroutines.runBlocking { rule.activity.app.settings.update { it.copy(continuous = false) } }
+    }
+
+    @Test fun journalPulpitSearchAndSettings() {
+        start()
+        reset()
+        // Diario de oración desde un versículo del lector
+        rule.onNodeWithText("Biblia").performClick()
+        waitText("El Verbo hecho carne")
+        rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
+        rule.onNode(hasText("Orar")).performScrollTo().performClick()
+        waitText("Petición de oración")
+        rule.onNode(hasSetTextAction() and hasText("Por qué o por quién oras")).performTextInput("Por mi familia")
+        rule.onAllNodes(hasSetTextAction())[1].performTextInput("Señor, guarda a los míos.")
+        shot("23_diario_peticion")
+        rule.onNodeWithText("Guardar").performClick()
+        waitText("El Verbo hecho carne")
+        kotlinx.coroutines.runBlocking {
+            val e = rule.activity.app.user.dao.dumpJournal().first()
+            org.junit.Assert.assertEquals("Por mi familia", e.title)
+            org.junit.Assert.assertEquals(43, e.book)
+        }
+
+        // Modo púlpito
+        waitText("En el principio era el Verbo", true)
+        rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
+        rule.onNode(hasText("Púlpito")).performScrollTo().performClick()
+        waitText("Velocidad de desplazamiento")
+        shot("24_pulpito")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+
+        // Imagen para compartir
+        rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
+        rule.onNode(hasText("Imagen")).performScrollTo().performClick()
+        waitText("Imagen para compartir")
+        shot("25_imagen_versiculo")
+        rule.onNode(hasText("Cerrar") and hasAnyAncestor(isDialog())).performClick()
+
+        // Búsqueda: frase exacta y en mis notas
+        rule.onNodeWithContentDescription("Buscar").performClick()
+        rule.onNode(hasSetTextAction()).performTextInput("principio era el Verbo")
+        rule.onNode(hasSetTextAction()).performImeAction()
+        rule.onNodeWithText("Frase exacta").performClick()
+        val t0 = System.currentTimeMillis()
+        waitText("1 resultado")
+        println("TIEMPO_FRASE=" + (System.currentTimeMillis() - t0))
+        shot("26_busqueda_frase")
+        rule.onNodeWithText("Mis notas y diario").performClick()
+        rule.onNode(hasSetTextAction()).performTextClearance()
+        rule.onNode(hasSetTextAction()).performTextInput("familia")
+        rule.onNode(hasSetTextAction()).performImeAction()
+        waitText("Oración")
+        shot("27_busqueda_diario")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+
+        // Ajustes nuevos
+        rule.onNodeWithText("Hoy").performClick()
+        rule.onNodeWithContentDescription("Ajustes").performClick()
+        waitText("Apariencia")
+        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Lectura en voz alta"))
+        shot("28_ajustes_voz")
+        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Respaldo automático"))
+        shot("29_ajustes_respaldo")
     }
 }

@@ -3,6 +3,7 @@ package com.biblia.estudio
 import android.app.Application
 import android.content.Context
 import com.biblia.estudio.data.content.ContentRepository
+import com.biblia.estudio.data.prefs.ReadingPosition
 import com.biblia.estudio.data.prefs.SettingsRepository
 import com.biblia.estudio.data.user.UserDatabase
 import com.biblia.estudio.data.user.UserRepository
@@ -16,10 +17,16 @@ class AppContainer(private val context: Context) {
     val settings = SettingsRepository(context)
     @Volatile var refParser: RefParser? = null
     val speaker by lazy { Speaker(context) }
+    /** Última posición de lectura (copia en memoria; se guarda en el almacén «state»). */
+    @Volatile var position = ReadingPosition()
 
     suspend fun init(onProgress: (Float) -> Unit = {}) {
         content.ensureReady(onProgress)
-        if (refParser == null) refParser = RefParser(content.abbreviations())
+        if (refParser == null) {
+            refParser = RefParser(content.abbreviations())
+            runCatching { settings.migratePosition() }
+            position = settings.currentPosition()
+        }
     }
 }
 

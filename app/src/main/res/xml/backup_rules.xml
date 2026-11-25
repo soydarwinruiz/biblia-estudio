@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android ≤ 11. La base de la Biblia (~110 MB) se regenera desde el APK: si se incluyera,
+     superaría el límite de 25 MB de la copia de Google y no se respaldaría NADA. -->
+<full-backup-content>
+    <include domain="database" path="user_data.db" />
+    <include domain="database" path="user_data.db-wal" />
+    <include domain="database" path="user_data.db-shm" />
+    <include domain="file" path="datastore/settings.preferences_pb" />
+    <include domain="file" path="datastore/state.preferences_pb" />
+</full-backup-content>
