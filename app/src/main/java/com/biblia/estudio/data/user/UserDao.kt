@@ -119,6 +119,7 @@ interface UserDao {
     @Query("SELECT * FROM memory_verses ORDER BY box, created") fun memoryVerses(): Flow<List<MemoryVerse>>
     @Query("SELECT * FROM memory_verses WHERE nextReview<=:day ORDER BY box, nextReview") suspend fun dueMemory(day: Long): List<MemoryVerse>
     @Query("SELECT COUNT(*) FROM memory_verses WHERE nextReview<=:day") fun dueMemoryCount(day: Long): Flow<Int>
+    @Query("SELECT COUNT(*) FROM memory_verses WHERE nextReview<=:day") suspend fun dueMemoryCountNow(day: Long): Int
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun addMemory(m: MemoryVerse): Long
     @Upsert suspend fun upsertMemory(m: MemoryVerse)
     @Query("DELETE FROM memory_verses WHERE id=:id") suspend fun deleteMemory(id: Long)
@@ -132,6 +133,34 @@ interface UserDao {
     suspend fun clearWordHighlights(version: String, book: Int, chapter: Int, verse: Int)
     @Query("SELECT DISTINCT book*1000000+chapter*1000+verse FROM tag_verses UNION SELECT DISTINCT book*1000000+chapter*1000+verse FROM topic_verses")
     fun allTaggedKeys(): Flow<List<Long>>
+
+    // Datos de un rango de capítulos (clave = libro*1000 + capítulo), para el lector
+    @Query("SELECT * FROM highlights WHERE book*1000+chapter BETWEEN :lo AND :hi")
+    fun highlightsInRange(lo: Int, hi: Int): Flow<List<Highlight>>
+    @Query("SELECT * FROM verse_notes WHERE book*1000+chapter BETWEEN :lo AND :hi")
+    fun notesInRange(lo: Int, hi: Int): Flow<List<VerseNote>>
+    @Query("SELECT * FROM bookmarks WHERE book*1000+chapter BETWEEN :lo AND :hi")
+    fun bookmarksInRange(lo: Int, hi: Int): Flow<List<Bookmark>>
+    @Query("SELECT * FROM word_highlights WHERE version=:version AND book*1000+chapter BETWEEN :lo AND :hi")
+    fun wordHighlightsInRange(version: String, lo: Int, hi: Int): Flow<List<WordHighlight>>
+    @Query("SELECT * FROM chapters_read WHERE book*1000+chapter BETWEEN :lo AND :hi")
+    fun chaptersReadInRange(lo: Int, hi: Int): Flow<List<ChapterRead>>
+    @Query("SELECT DISTINCT book*1000000+chapter*1000+verse FROM tag_verses WHERE book*1000+chapter BETWEEN :lo AND :hi UNION SELECT DISTINCT book*1000000+chapter*1000+verse FROM topic_verses WHERE book*1000+chapter BETWEEN :lo AND :hi")
+    fun taggedKeysInRange(lo: Int, hi: Int): Flow<List<Long>>
+
+    // Diario
+    @Query("SELECT * FROM journal WHERE kind=:kind ORDER BY answered, updated DESC") fun journal(kind: String): Flow<List<JournalEntry>>
+    @Query("SELECT * FROM journal WHERE id=:id") suspend fun journalEntry(id: Long): JournalEntry?
+    @Upsert suspend fun upsertJournal(e: JournalEntry): Long
+    @Query("DELETE FROM journal WHERE id=:id") suspend fun deleteJournal(id: Long)
+    @Query("SELECT COUNT(*) FROM journal WHERE kind='prayer' AND answered=1") fun answeredCount(): Flow<Int>
+
+    // Búsqueda en datos personales
+    @Query("SELECT * FROM verse_notes WHERE text LIKE '%' || :q || '%' ORDER BY updated DESC LIMIT 100") suspend fun searchNotes(q: String): List<VerseNote>
+    @Query("SELECT * FROM studies WHERE title LIKE '%' || :q || '%' OR observation LIKE '%' || :q || '%' OR principle LIKE '%' || :q || '%' OR application LIKE '%' || :q || '%' OR proposition LIKE '%' || :q || '%' OR outline LIKE '%' || :q || '%' OR exegeticalIdea LIKE '%' || :q || '%' OR keyWords LIKE '%' || :q || '%' ORDER BY updated DESC LIMIT 50")
+    suspend fun searchStudies(q: String): List<Study>
+    @Query("SELECT * FROM journal WHERE title LIKE '%' || :q || '%' OR text LIKE '%' || :q || '%' OR answerNote LIKE '%' || :q || '%' ORDER BY updated DESC LIMIT 50")
+    suspend fun searchJournal(q: String): List<JournalEntry>
 
     // Respaldo
     @Query("SELECT * FROM highlights") suspend fun dumpHighlights(): List<Highlight>
@@ -151,6 +180,7 @@ interface UserDao {
     @Query("SELECT * FROM lesson_reflections") suspend fun dumpReflections(): List<LessonReflection>
     @Query("SELECT * FROM memory_verses") suspend fun dumpMemory(): List<MemoryVerse>
     @Query("SELECT * FROM word_highlights") suspend fun dumpWordHighlights(): List<WordHighlight>
+    @Query("SELECT * FROM journal") suspend fun dumpJournal(): List<JournalEntry>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insHighlights(x: List<Highlight>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insNotes(x: List<VerseNote>)
@@ -169,4 +199,5 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insReflections(x: List<LessonReflection>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insMemory(x: List<MemoryVerse>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insWordHighlights(x: List<WordHighlight>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insJournal(x: List<JournalEntry>)
 }

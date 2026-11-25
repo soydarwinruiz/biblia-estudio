@@ -1,5 +1,6 @@
 package com.biblia.estudio.data.user
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -113,7 +114,11 @@ data class MemoryVerse(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val book: Int, val chapter: Int, val verse: Int, val verseEnd: Int,
     val box: Int = 0, val nextReview: Long = 0, val reviews: Int = 0,
-    val created: Long = System.currentTimeMillis()
+    val created: Long = System.currentTimeMillis(),
+    // Repaso espaciado SM-2 (v4): factor de facilidad e intervalo actual en días.
+    @ColumnInfo(defaultValue = "2.5") val ease: Double = 2.5,
+    @ColumnInfo(defaultValue = "0") val interval: Int = 0,
+    @ColumnInfo(defaultValue = "0") val lapses: Int = 0,
 )
 
 /** Resaltado de palabras sueltas dentro de un versículo (índices de palabra, en una versión concreta). */
@@ -124,4 +129,22 @@ data class WordHighlight(
     val version: String, val book: Int, val chapter: Int, val verse: Int,
     val wordStart: Int, val wordEnd: Int, val color: Int,
     val created: Long = System.currentTimeMillis()
+)
+
+/**
+ * Diario espiritual (v4): peticiones de oración (kind = "prayer") con seguimiento de respuesta,
+ * y entradas de diario (kind = "journal"), opcionalmente ligadas a un versículo.
+ */
+@Serializable
+@Entity(tableName = "journal", indices = [Index("kind")])
+data class JournalEntry(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: String = "prayer",
+    val title: String = "",
+    val text: String = "",
+    val book: Int = 0, val chapter: Int = 0, val verse: Int = 0,
+    val answered: Boolean = false,
+    val answeredAt: Long = 0,
+    val answerNote: String = "",
+    val created: Long = System.currentTimeMillis(), val updated: Long = System.currentTimeMillis()
 )

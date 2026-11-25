@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.StopCircle
@@ -40,26 +41,58 @@ import java.text.Normalizer
 
 private fun fold(s: String) = Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{M}"), "").lowercase()
 
+/** Resultado de búsqueda en datos personales o notas de estudio. */
+private data class OtherHit(val overline: String, val text: String, val ref: PassageRef?, val route: String?)
+
+private val SCOPES = listOf("Biblia", "Notas MacArthur", "Mis notas y diario")
+
 @Composable
 fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String = "") {
     val c = LocalContext.current.app; val scope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     var version by rememberSaveable { mutableStateOf<String?>(settings.version) }
     var testament by rememberSaveable { mutableStateOf<String?>(null) }
+    var exact by rememberSaveable { mutableStateOf(false) }
+    var where by rememberSaveable { mutableIntStateOf(0) }
     var results by remember { mutableStateOf<List<SearchHit>?>(null) }
+    var others by remember { mutableStateOf<List<OtherHit>?>(null) }
     var refHit by remember { mutableStateOf<PassageRef?>(null) }
-    fun run() = scope.launch {
+    val recent by c.settings.recentSearches.collectAsState(initial = emptyList())
+    var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    suspend fun search() {
+        if (query.isBlank()) { results = null; others = null; refHit = null; return }
         refHit = c.refParser?.parseQuery(query)
-        results = c.content.search(query, version, testament, null)
+        when (where) {
+            0 -> { results = c.content.search(query, version, testament, null, exact = exact); others = null }
+            1 -> {
+                results = null
+                others = c.content.notesMentioning(query.trim(), 100).map { n -> OtherHit(c.content.label(n.ref), n.text, n.ref, null) }
+            }
+            else -> {
+                results = null
+                val q = query.trim()
+                val notes = c.user.dao.searchNotes(q).map { n -> OtherHit("Nota · " + c.content.label(PassageRef(n.book, n.chapter, n.verse)), n.text, PassageRef(n.book, n.chapter, n.verse), null) }
+                val studies = c.user.dao.searchStudies(q).map { st -> OtherHit("Estudio · " + c.content.label(PassageRef(st.book, st.chapter, st.verse, st.chapterEnd, st.verseEnd)), st.title, null, "studyedit/${st.id}") }
+                val journal = c.user.dao.searchJournal(q).map { j -> OtherHit((if (j.kind == "prayer") "Oración" else "Diario"), j.title.ifBlank { j.text }, null, "journal/${j.id}?kind=${j.kind}") }
+                others = notes + studies + journal
+            }
+        }
+        c.settings.addRecentSearch(query)
     }
+    // Cada búsqueda nueva cancela la anterior, para que no la sobrescriba un resultado viejo.
+    fun run() { job?.cancel(); job = scope.launch { search() } }
     LaunchedEffect(Unit) { if (initialQuery.isNotBlank()) run() }
-    Scaffold(topBar = { BackTopBar("Buscar en la Biblia", { nav.popBackStack() }) }) { pad ->
+    Scaffold(topBar = { BackTopBar("Buscar", { nav.popBackStack() }) }) { pad ->
         Column(Modifier.padding(pad)) {
             OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true,
                 placeholder = { Text("Palabras o referencia (p. ej. «gracia», «Juan 3:16»)") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { run() }))
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                SCOPES.forEachIndexed { i, label -> FilterChip(where == i, { where = i; run() }, { Text(label) }, Modifier.padding(end = 6.dp)) }
+            }
+            if (where == 0) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 2.dp)) {
+                FilterChip(exact, { exact = !exact; run() }, { Text("Frase exacta") }, Modifier.padding(end = 12.dp))
                 FilterChip(testament == null, { testament = null; run() }, { Text("Toda la Biblia") }, Modifier.padding(end = 6.dp))
                 FilterChip(testament == "AT", { testament = "AT"; run() }, { Text("AT") }, Modifier.padding(end = 6.dp))
                 FilterChip(testament == "NT", { testament = "NT"; run() }, { Text("NT") }, Modifier.padding(end = 12.dp))
@@ -67,33 +100,66 @@ fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String
                 c.content.versions.forEach { v -> FilterChip(version == v.id, { version = v.id; run() }, { Text(v.id) }, Modifier.padding(end = 6.dp)) }
             }
             val r = results
+            val o = others
+            val words = query.trim().split(Regex("\\s+")).filter { it.length > 1 }.map { fold(it) }
             LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                if (r == null && o == null && recent.isNotEmpty()) {
+                    item {
+                        Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text("Búsquedas recientes", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { scope.launch { c.settings.clearRecentSearches() } }) { Text("Borrar") }
+                        }
+                    }
+                    items(recent) { q -> ListItem(headlineContent = { Text(q) }, leadingContent = { Icon(Icons.Filled.History, null) }, modifier = Modifier.clickable { query = q; run() }) }
+                }
                 refHit?.let { ref -> item {
                     ListItem(headlineContent = { Text("Ir a ${c.content.label(ref)}") }, leadingContent = { Icon(Icons.Filled.Search, null) },
                         modifier = Modifier.clickable { nav.openRef(ref) })
                     HorizontalDivider()
                 } }
                 if (r != null) {
-                    item { Text("${r.size}${if (r.size >= 300) "+" else ""} resultados", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(16.dp, 4.dp)) }
+                    item { Text("${r.size}${if (r.size >= 300) "+" else ""} resultado${if (r.size == 1) "" else "s"}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(16.dp, 4.dp)) }
                     if (r.isEmpty() && refHit == null) item { EmptyState(Icons.Filled.Search, "Sin resultados", "Prueba con otras palabras. La búsqueda no distingue acentos.") }
-                    val words = query.trim().split(Regex("\\s+")).filter { it.length > 1 }.map { fold(it) }
                     items(r) { h ->
-                        val ann = buildAnnotatedString {
-                            Regex("\\S+|\\s+").findAll(h.text).forEach { m ->
-                                val w = fold(m.value.trim(',', '.', ';', ':', '¿', '?', '¡', '!', '«', '»', '“', '”'))
-                                if (words.any { w.startsWith(it) }) withStyle(SpanStyle(fontWeight = FontWeight.Bold, background = MaterialTheme.colorScheme.primaryContainer)) { append(m.value) }
-                                else append(m.value)
-                            }
-                        }
                         ListItem(
                             overlineContent = { Text("${c.content.book(h.book).name} ${h.chapter}:${h.verse} · ${h.version}") },
-                            headlineContent = { Text(ann, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif)) },
+                            headlineContent = { Text(highlightWords(h.text, words), style = MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif)) },
                             modifier = Modifier.clickable { nav.openRef(PassageRef(h.book, h.chapter, h.verse)) }
+                        )
+                    }
+                }
+                if (o != null) {
+                    item { Text("${o.size} resultado${if (o.size == 1) "" else "s"}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(16.dp, 4.dp)) }
+                    if (o.isEmpty()) item { EmptyState(Icons.Filled.Search, "Sin resultados", if (where == 1) "Ninguna nota de estudio menciona ese texto." else "No hay notas, estudios ni entradas de diario con ese texto.") }
+                    items(o) { h ->
+                        ListItem(
+                            overlineContent = { Text(h.overline) },
+                            headlineContent = { Text(highlightWords(snippet(h.text, words), words), style = MaterialTheme.typography.bodyMedium, maxLines = 4) },
+                            modifier = Modifier.clickable { h.route?.let { nav.navigate(it) } ?: h.ref?.let { nav.openRef(it) } }
                         )
                     }
                 }
             }
         }
+    }
+}
+
+/** Recorta un texto largo alrededor de la primera coincidencia. */
+private fun snippet(text: String, words: List<String>): String {
+    if (text.length < 280 || words.isEmpty()) return text
+    val f = fold(text)
+    val i = words.mapNotNull { w -> f.indexOf(w).takeIf { it >= 0 } }.minOrNull() ?: return text.take(280) + "…"
+    val start = (i - 100).coerceAtLeast(0)
+    return (if (start > 0) "…" else "") + text.substring(start, (start + 280).coerceAtMost(text.length)) + if (start + 280 < text.length) "…" else ""
+}
+
+@Composable
+private fun highlightWords(text: String, words: List<String>) = buildAnnotatedString {
+    val bg = MaterialTheme.colorScheme.primaryContainer
+    Regex("\\S+|\\s+").findAll(text).forEach { m ->
+        val w = fold(m.value.trim(',', '.', ';', ':', '¿', '?', '¡', '!', '«', '»', '“', '”', '(', ')'))
+        if (w.isNotBlank() && words.any { w.startsWith(it) }) withStyle(SpanStyle(fontWeight = FontWeight.Bold, background = bg)) { append(m.value) }
+        else append(m.value)
     }
 }
 

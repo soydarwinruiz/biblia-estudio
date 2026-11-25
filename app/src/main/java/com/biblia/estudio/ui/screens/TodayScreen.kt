@@ -57,6 +57,8 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
     var offset by rememberSaveable { mutableIntStateOf(0) }
     val day = realToday + offset
     val isToday = offset == 0
+    val posOrNull by c.settings.position.collectAsState(initial = null)
+    val pos = posOrNull ?: com.biblia.estudio.data.prefs.ReadingPosition()
     val memoryDue by c.user.dao.dueMemoryCount(realToday).collectAsState(initial = 0)
     val speaking by c.speaker.speaking.collectAsState()
     val enrollments by c.user.dao.enrollments().collectAsState(initial = emptyList())
@@ -105,12 +107,12 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
                 }
             }
             if (!isToday) AssistChip(onClick = { offset = 0 }, label = { Text("Volver a hoy") }, modifier = Modifier.padding(horizontal = 16.dp))
-            if (isToday) ElevatedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.openRef(PassageRef(settings.lastBook, settings.lastChapter)) }) {
+            if (isToday && posOrNull != null) ElevatedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.openRef(PassageRef(pos.book, pos.chapter)) }) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text("Continuar leyendo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        Text("${c.content.book(settings.lastBook).name} ${settings.lastChapter}", style = MaterialTheme.typography.titleMedium)
+                        Text("${c.content.book(pos.book).name} ${pos.chapter}", style = MaterialTheme.typography.titleMedium)
                     }
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
                 }

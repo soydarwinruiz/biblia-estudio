@@ -26,6 +26,7 @@ import com.biblia.estudio.ui.components.LinkedText
 import com.biblia.estudio.ui.components.Loading
 import com.biblia.estudio.ui.components.RefPreviewDialog
 import com.biblia.estudio.ui.openRef
+import com.biblia.estudio.ui.openPulpit
 import com.biblia.estudio.ui.theme.Serif
 import kotlinx.coroutines.launch
 
@@ -38,6 +39,7 @@ fun StudyEditorScreen(nav: NavController, settings: AppSettings, id: Long, initi
     var savedId by rememberSaveable { mutableLongStateOf(id) }
     var dirty by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var shareMenu by remember { mutableStateOf(false) }
     LaunchedEffect(id) {
         study = if (id > 0) c.user.dao.study(id) else {
             val r = initialRef
@@ -56,7 +58,33 @@ fun StudyEditorScreen(nav: NavController, settings: AppSettings, id: Long, initi
     }
     Scaffold(topBar = {
         BackTopBar(s?.title ?: "Estudio", { if (dirty) save { nav.popBackStack() } else nav.popBackStack() }) {
-            IconButton(onClick = { s?.let { shareText(ctx, exportStudy(it, c.content.label(PassageRef(it.book, it.chapter, it.verse, it.chapterEnd, it.verseEnd)))) } }) { Icon(Icons.Filled.Share, "Compartir") }
+            Box {
+                IconButton(onClick = { shareMenu = true }) { Icon(Icons.Filled.Share, "Compartir y exportar") }
+                DropdownMenu(shareMenu, { shareMenu = false }) {
+                    DropdownMenuItem(text = { Text("Compartir como texto") }, onClick = {
+                        shareMenu = false
+                        s?.let { shareText(ctx, exportStudy(it, c.content.label(PassageRef(it.book, it.chapter, it.verse, it.chapterEnd, it.verseEnd)))) }
+                    })
+                    DropdownMenuItem(text = { Text("Exportar a PDF") }, onClick = {
+                        shareMenu = false
+                        val st = s ?: return@DropdownMenuItem
+                        scope.launch {
+                            val r = PassageRef(st.book, st.chapter, st.verse, st.chapterEnd, st.verseEnd)
+                            val label = c.content.label(r)
+                            val passage = c.content.passage(settings.version, r).joinToString(" ") { "${it.label} ${it.text}" }
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                shareFile(ctx, "estudio-${st.id}.pdf", "application/pdf") { f ->
+                                    writePdf(f, st.title, "$label · ${settings.version}", listOf("Texto" to passage) + studySections(st))
+                                }
+                            }
+                        }
+                    })
+                    DropdownMenuItem(text = { Text("Abrir en modo púlpito") }, onClick = {
+                        shareMenu = false
+                        s?.let { nav.openPulpit(PassageRef(it.book, it.chapter, it.verse, it.chapterEnd, it.verseEnd)) }
+                    })
+                }
+            }
             if (savedId > 0) IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Filled.Delete, "Eliminar") }
             IconButton(onClick = { save() }) { Icon(Icons.Filled.Save, "Guardar") }
         }
@@ -194,4 +222,16 @@ fun exportStudy(s: Study, ref: String): String = buildString {
     sec("EXÉGESIS", "Observaciones" to s.observation, "Palabras clave" to s.keyWords, "Estructura" to s.structure, "Idea exegética" to s.exegeticalIdea)
     sec("HERMENÉUTICA", "Significado original" to s.originalMeaning, "Principio" to s.principle, "Referencias cruzadas" to s.crossReferences, "Aplicación" to s.application)
     sec("HOMILÉTICA", "Proposición" to s.proposition, "Propósito" to s.purpose, "Bosquejo" to s.outline, "Ilustraciones" to s.illustrations, "Aplicaciones" to s.sermonApplication, "Conclusión" to s.conclusion)
+}
+
+/** Secciones del estudio (título → texto) para el PDF. */
+fun studySections(s: Study): List<Pair<String, String>> {
+    fun sec(title: String, vararg fields: Pair<String, String>): Pair<String, String> =
+        title to fields.filter { it.second.isNotBlank() }.joinToString("\n") { (k, v) -> "# $k\n$v" }
+    return listOf(
+        sec("Contexto", "Histórico y cultural" to s.contextHistorical, "Literario" to s.contextLiterary),
+        sec("Exégesis", "Observaciones" to s.observation, "Palabras clave" to s.keyWords, "Estructura" to s.structure, "Idea exegética" to s.exegeticalIdea),
+        sec("Hermenéutica", "Significado original" to s.originalMeaning, "Principio" to s.principle, "Referencias cruzadas" to s.crossReferences, "Aplicación" to s.application),
+        sec("Homilética", "Proposición" to s.proposition, "Propósito" to s.purpose, "Bosquejo" to s.outline, "Ilustraciones" to s.illustrations, "Aplicaciones" to s.sermonApplication, "Conclusión" to s.conclusion),
+    )
 }
