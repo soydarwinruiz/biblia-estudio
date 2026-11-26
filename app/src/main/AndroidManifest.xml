@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 100% local: la app NO solicita permiso de INTERNET -->
+    <!-- Todo el contenido y tus datos son locales. Internet se usa SOLO para comprobar, una vez al día,
+         si hay una versión nueva (lee un archivo público; no envía datos). Se desactiva en Ajustes. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Recordatorio puntual a la hora elegida y reprogramarlo tras reiniciar el teléfono -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />

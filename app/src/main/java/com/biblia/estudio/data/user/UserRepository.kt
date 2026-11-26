@@ -80,6 +80,19 @@ class UserRepository(private val db: UserDatabase) {
     suspend fun createTopic(name: String, description: String, color: Int): Long =
         dao.insertTopic(UserTopic(name = name.trim(), description = description.trim(), color = color))
 
+    /** Añade versículos a un tema al final de la lista (en el orden en que el usuario los agrega). */
+    suspend fun addToTopic(topicId: Long, book: Int, chapter: Int, verse: Int, verseEnd: Int) {
+        val pos = dao.maxTopicPosition(topicId) + 1
+        dao.addTopicVerse(TopicVerse(topicId = topicId, book = book, chapter = chapter, verse = verse, verseEnd = verseEnd, position = pos))
+    }
+
+    /** Guarda el orden elegido arrastrando: ids en el nuevo orden. */
+    suspend fun reorderTopic(ids: List<Long>) = db.withTransaction { ids.forEachIndexed { i, id -> dao.setTopicVersePosition(id, i + 1) } }
+
+    /** Reordena un tema según el orden bíblico (Génesis → Apocalipsis). */
+    suspend fun sortTopicByBook(topicId: Long) =
+        reorderTopic(dao.topicVersesNow(topicId).sortedWith(compareBy({ it.book }, { it.chapter }, { it.verse })).map { it.id })
+
     suspend fun deleteTopic(id: Long) = db.withTransaction { dao.deleteTopicVerses(id); dao.deleteTopic(id) }
 
     suspend fun createTag(name: String): Long {

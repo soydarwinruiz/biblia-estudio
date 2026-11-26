@@ -96,6 +96,33 @@ class ContentTest {
         assertTrue(u.dao.dumpJournal().isEmpty())
     }
 
+    @Test fun topicOrderIsInsertionAndCanBeChanged() = runBlocking {
+        c.init()
+        val u = c.user
+        val t = u.createTopic("Orden", "", 0)
+        u.addToTopic(t, 46, 6, 19, 20)   // 1 Corintios primero
+        u.addToTopic(t, 1, 3, 19, 19)    // luego Génesis
+        u.addToTopic(t, 40, 27, 59, 60)  // luego Mateo
+        fun books() = runBlocking { u.dao.topicVersesNow(t).map { it.book } }
+        assertEquals(listOf(46, 1, 40), books())                 // orden en que se agregaron
+        val ids = u.dao.topicVersesNow(t).map { it.id }
+        u.reorderTopic(listOf(ids[2], ids[0], ids[1]))          // arrastrar Mateo al principio
+        assertEquals(listOf(40, 46, 1), books())
+        u.sortTopicByBook(t)
+        assertEquals(listOf(1, 40, 46), books())
+        // El orden viaja en el respaldo
+        u.importJson(u.exportJson())
+        assertEquals(listOf(1, 40, 46), books())
+    }
+
+    @Test fun updateInfoParsing() {
+        val i = com.biblia.estudio.work.UpdateCheck.parse("""{"versionCode": 8, "versionName": "1.6", "url": "https://x/y.apk", "notes": "Novedades"}""")!!
+        assertEquals(8L, i.versionCode); assertEquals("1.6", i.versionName); assertEquals("https://x/y.apk", i.url)
+        assertEquals(null, com.biblia.estudio.work.UpdateCheck.parse("<html>404</html>"))
+        val web = java.io.File("/home/user/codice-vivo-web/public/android-version.json")
+        if (web.exists()) assertEquals(8L, com.biblia.estudio.work.UpdateCheck.parse(web.readText())!!.versionCode)
+    }
+
     @Test fun phraseSearch() = runBlocking {
         c.init()
         val content = c.content

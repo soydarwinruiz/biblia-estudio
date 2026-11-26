@@ -61,6 +61,13 @@ fun BackTopBar(title: String, onBack: () -> Unit, actions: @Composable () -> Uni
     )
 }
 
+/** Barra superior de una sección principal (sin flecha de volver). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SectionTopBar(title: String, actions: @Composable () -> Unit = {}) {
+    TopAppBar(title = { Text(title, maxLines = 1) }, actions = { actions() })
+}
+
 @Composable
 fun Loading() = Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
 

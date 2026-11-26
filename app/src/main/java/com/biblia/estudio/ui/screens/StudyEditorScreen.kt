@@ -6,6 +6,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.CoPresent
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.withStyle
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -154,26 +160,60 @@ private fun PassageTab(s: Study, ref: PassageRef, settings: AppSettings, upd: ((
             .filter { n -> ref.verse == 0 || (n.chapter * 1000 + n.verse) in (ref.chapter * 1000 + ref.verse)..(ref.chapterEnd * 1000 + (if (ref.verseEnd == 0) 999 else ref.verseEnd)) || ref.contains(n.chapter, n.verse) }
     }
     val maxV by produceState(176, s.book, s.chapter) { value = c.content.chapter("RVR1960", s.book, s.chapter).maxOfOrNull { it.verseEnd } ?: 176 }
-    OutlinedTextField(s.title, { v -> upd { it.copy(title = v) } }, Modifier.fillMaxWidth(), label = { Text("Título del estudio") })
-    Text("Pasaje", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
-    Row {
-        NumberField("Desde v.", s.verse) { v -> upd { it.copy(verse = v.coerceIn(0, maxV)) } }
-        Spacer(Modifier.width(8.dp))
-        NumberField("Hasta v.", s.verseEnd) { v -> upd { it.copy(verseEnd = v.coerceIn(0, maxV), chapterEnd = it.chapter) } }
+    var expanded by remember(ref) { mutableStateOf(false) }
+    var allNotes by remember(ref) { mutableStateOf(false) }
+    OutlinedTextField(s.title, { v -> upd { it.copy(title = v) } }, Modifier.fillMaxWidth(), label = { Text("Título del estudio") }, singleLine = true)
+
+    Text("Pasaje · ${bk.name} ${s.chapter}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(s.verse == 0, { upd { it.copy(verse = 0, verseEnd = 0, chapterEnd = it.chapter) } }, { Text("Capítulo completo") })
+        FilterChip(s.verse > 0, { if (s.verse == 0) upd { it.copy(verse = 1, verseEnd = minOf(maxV, 1), chapterEnd = it.chapter) } }, { Text("Versículos") })
     }
-    Text("${bk.name} ${s.chapter} · 0 = capítulo completo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-    Card(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Column(Modifier.padding(12.dp)) {
-            Text(c.content.label(ref) + " · " + settings.version, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            Text(verses.joinToString(" ") { "${it.label} ${it.text}" }, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Serif))
+    if (s.verse > 0) Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        NumberField("Desde", s.verse) { v -> if (v in 1..maxV) upd { it.copy(verse = v, verseEnd = maxOf(it.verseEnd, v), chapterEnd = it.chapter) } }
+        Text("  –  ", style = MaterialTheme.typography.titleMedium)
+        NumberField("Hasta", s.verseEnd) { v -> if (v in s.verse..maxV) upd { it.copy(verseEnd = v, chapterEnd = it.chapter) } }
+        Text("  de $maxV", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+    }
+
+    ElevatedCard(Modifier.fillMaxWidth().padding(vertical = 10.dp), colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(c.content.label(ref), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                Text(settings.version, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+            }
+            Spacer(Modifier.height(8.dp))
+            val shown = if (expanded || verses.size <= 10) verses else verses.take(8)
+            val numColor = MaterialTheme.colorScheme.primary
+            Text(androidx.compose.ui.text.buildAnnotatedString {
+                shown.forEach { v ->
+                    withStyle(androidx.compose.ui.text.SpanStyle(color = numColor, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontSize = MaterialTheme.typography.labelSmall.fontSize, baselineShift = androidx.compose.ui.text.style.BaselineShift(0.3f))) { append(v.label + " ") }
+                    append(v.text + " ")
+                }
+            }, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Serif, lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.15f))
+            if (verses.size > 10) TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
+                Text(if (expanded) "Mostrar menos" else "Mostrar todo (${verses.size} versículos)")
+            }
         }
     }
-    Row { TextButton(onClick = { nav.openRef(ref) }) { Text("Abrir en la Biblia") }; TextButton(onClick = { nav.navigate("intro/${s.book}") }) { Text("Introducción del libro") } }
-    Text("Notas de estudio MacArthur (${notes.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
-    notes.forEach { n ->
-        Text(c.content.label(n.ref), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
-        LinkedText(n.text, s.book, n.chapter, MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif), onRef = onRef)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        AssistChip(onClick = { nav.openRef(ref) }, label = { Text("Abrir en la Biblia") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.MenuBook, null, Modifier.size(18.dp)) })
+        AssistChip(onClick = { nav.navigate("intro/${s.book}") }, label = { Text("Introducción del libro") }, leadingIcon = { Icon(Icons.Filled.Info, null, Modifier.size(18.dp)) })
+        AssistChip(onClick = { nav.openPulpit(ref) }, label = { Text("Púlpito") }, leadingIcon = { Icon(Icons.Filled.CoPresent, null, Modifier.size(18.dp)) })
     }
+
+    Text("Notas de estudio MacArthur (${notes.size})", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+    if (notes.isEmpty()) Text("No hay notas para este pasaje.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+    (if (allNotes) notes else notes.take(4)).forEach { n ->
+        OutlinedCard(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Column(Modifier.padding(12.dp)) {
+                Text(c.content.label(n.ref), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                LinkedText(n.text, s.book, n.chapter, MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif), onRef = onRef)
+            }
+        }
+    }
+    if (notes.size > 4) TextButton(onClick = { allNotes = !allNotes }) { Text(if (allNotes) "Mostrar menos notas" else "Ver las ${notes.size} notas") }
 }
 
 @Composable
@@ -208,8 +248,9 @@ private fun Field(label: String, value: String, hint: String, minLines: Int = 3,
 
 @Composable
 private fun NumberField(label: String, value: Int, onChange: (Int) -> Unit) {
-    var text by remember(value) { mutableStateOf(value.toString()) }
-    OutlinedTextField(text, { t -> text = t.filter { it.isDigit() }.take(3); onChange(text.toIntOrNull() ?: 0) }, Modifier.width(120.dp), label = { Text(label) }, singleLine = true)
+    var text by remember(value) { mutableStateOf(if (value > 0) value.toString() else "") }
+    OutlinedTextField(text, { t -> text = t.filter { it.isDigit() }.take(3); text.toIntOrNull()?.let(onChange) }, Modifier.width(96.dp), label = { Text(label) }, singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
 }
 
 fun exportStudy(s: Study, ref: String): String = buildString {

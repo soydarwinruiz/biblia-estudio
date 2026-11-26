@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.WbSunny
@@ -35,7 +36,8 @@ private val tabs = listOf(
     Tab("today", "Hoy", Icons.Filled.WbSunny),
     Tab("reader", "Biblia", Icons.AutoMirrored.Filled.MenuBook),
     Tab("study", "Estudio", Icons.Filled.School),
-    Tab("mine", "Mis temas", Icons.Filled.Bookmarks),
+    Tab("journal", "Diario", Icons.Filled.EventNote),
+    Tab("mine", "Temas", Icons.Filled.Bookmarks),
     Tab("progress", "Progreso", Icons.Filled.BarChart),
 )
 
@@ -74,7 +76,7 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
                                 launchSingleTop = true; restoreState = true
                             }
                         },
-                        icon = { Icon(t.icon, t.label) }, label = { Text(t.label) }
+                        icon = { Icon(t.icon, t.label) }, label = { Text(t.label, maxLines = 1, softWrap = false, style = androidx.compose.material3.MaterialTheme.typography.labelSmall) }
                     )
                 }
             }
@@ -128,7 +130,7 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
             composable("prayer?o={o}", arguments = listOf(navArgument("o") { type = NavType.IntType; defaultValue = 0 })) { e -> PrayerScreen(nav, LocalSettings.current, e.arguments!!.getInt("o")) }
             composable("memory") { MemoryScreen(nav, LocalSettings.current) }
             composable("settings") { SettingsScreen(nav, LocalSettings.current) }
-            composable("journal") { JournalScreen(nav) }
+            composable("journal?t={t}", arguments = listOf(navArgument("t") { type = NavType.IntType; defaultValue = 0 })) { e -> JournalScreen(nav, e.arguments!!.getInt("t")) }
             composable("journal/{id}?kind={kind}&b={b}&c={c}&v={v}", arguments = listOf(
                 navArgument("id") { type = NavType.LongType }, navArgument("kind") { type = NavType.StringType; defaultValue = "prayer" },
                 navArgument("b") { type = NavType.IntType; defaultValue = 0 }, navArgument("c") { type = NavType.IntType; defaultValue = 0 }, navArgument("v") { type = NavType.IntType; defaultValue = 0 },

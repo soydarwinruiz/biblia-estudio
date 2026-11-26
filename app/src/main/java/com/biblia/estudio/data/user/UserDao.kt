@@ -50,8 +50,11 @@ interface UserDao {
     @Upsert suspend fun upsertTopic(t: UserTopic)
     @Query("DELETE FROM user_topics WHERE id=:id") suspend fun deleteTopic(id: Long)
     @Query("DELETE FROM topic_verses WHERE topicId=:id") suspend fun deleteTopicVerses(id: Long)
-    @Query("SELECT * FROM topic_verses WHERE topicId=:id ORDER BY book, chapter, verse")
+    @Query("SELECT * FROM topic_verses WHERE topicId=:id ORDER BY position, created, id")
     fun topicVerses(id: Long): Flow<List<TopicVerse>>
+    @Query("SELECT COALESCE(MAX(position), 0) FROM topic_verses WHERE topicId=:id") suspend fun maxTopicPosition(id: Long): Int
+    @Query("SELECT * FROM topic_verses WHERE topicId=:id ORDER BY position, created, id") suspend fun topicVersesNow(id: Long): List<TopicVerse>
+    @Query("UPDATE topic_verses SET position=:position WHERE id=:id") suspend fun setTopicVersePosition(id: Long, position: Int)
     @Query("SELECT topicId FROM topic_verses WHERE book=:book AND chapter=:chapter AND verse=:verse")
     suspend fun topicsOfVerse(book: Int, chapter: Int, verse: Int): List<Long>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun addTopicVerse(v: TopicVerse)
@@ -150,6 +153,9 @@ interface UserDao {
 
     // Diario
     @Query("SELECT * FROM journal WHERE kind=:kind ORDER BY answered, updated DESC") fun journal(kind: String): Flow<List<JournalEntry>>
+    @Query("SELECT * FROM journal WHERE kind='event' ORDER BY eventAt") fun events(): Flow<List<JournalEntry>>
+    @Query("SELECT * FROM journal WHERE kind='event' AND eventAt>=:from ORDER BY eventAt") suspend fun eventsFrom(from: Long): List<JournalEntry>
+    @Query("SELECT * FROM journal WHERE kind='event' AND eventAt>=:from ORDER BY eventAt LIMIT :n") fun upcomingEvents(from: Long, n: Int): Flow<List<JournalEntry>>
     @Query("SELECT * FROM journal WHERE id=:id") suspend fun journalEntry(id: Long): JournalEntry?
     @Upsert suspend fun upsertJournal(e: JournalEntry): Long
     @Query("DELETE FROM journal WHERE id=:id") suspend fun deleteJournal(id: Long)

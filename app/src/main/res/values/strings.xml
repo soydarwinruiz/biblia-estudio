@@ -8,5 +8,6 @@
     <string name="sc_memory">Memorizar</string>
     <string name="sc_memory_long">Repasar versículos</string>
     <string name="sc_journal">Diario</string>
-    <string name="sc_journal_long">Diario de oración</string>
+    <string name="sc_journal_long">Diario y agenda</string>
+    <string name="whats_new">• Diario como sección propia, con Agenda de la iglesia: cultos, ayunos, vigilias, devocionales, campañas… con día, hora, lugar y aviso.\n• Temas: los versículos quedan en el orden en que los agregas y puedes arrastrarlos para reordenarlos.\n• Selector de libros: ya se ven 1 y 2 Tesalonicenses.\n• Modo púlpito y pestaña Pasaje del estudio mejorados.\n• Aviso cuando haya una versión nueva.</string>
 </resources>

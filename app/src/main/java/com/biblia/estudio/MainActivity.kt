@@ -65,6 +65,8 @@ class MainActivity : ComponentActivity() {
                     Notifications.schedule(applicationContext, s.notifications, s.notifyHour, s.notifyMinute)
                     AutoBackup.schedule(applicationContext, s.autoBackupDays)
                 }
+                runCatching { com.biblia.estudio.work.UpdateCheck.schedule(applicationContext, c.settings.current().updateCheck) }
+                runCatching { com.biblia.estudio.work.UpdateCheck.notifyIfUpdated(applicationContext) }
             }
             LaunchedEffect(settings.ttsLocale, settings.ttsRate) { c.speaker.configure(settings.ttsLocale, settings.ttsRate) }
             BibliaTheme(settings.theme, settings.dynamicColor) {
@@ -75,6 +77,7 @@ class MainActivity : ComponentActivity() {
                         else -> Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Códice vivo", style = MaterialTheme.typography.headlineSmall)
                             Text("Biblia de estudio", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                            Text("por Danruz", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                             Spacer(Modifier.height(16.dp))
                             if (error != null) Text("No se pudo preparar la base de datos: $error", color = MaterialTheme.colorScheme.error)
                             else {
