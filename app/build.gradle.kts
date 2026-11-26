@@ -17,7 +17,7 @@ val signProps = Properties().apply {
 fun secret(prop: String, env: String): String? = signProps.getProperty(prop) ?: System.getenv(env)
 val storePass = secret("storePassword", "CODICE_STORE_PASSWORD")
 val keyPass = secret("keyPassword", "CODICE_KEY_PASSWORD") ?: storePass
-val storePath = secret("storeFile", "CODICE_STORE_FILE") ?: "keystore/biblia-release.jks"
+val storePath = secret("storeFile", "CODICE_STORE_FILE") ?: "keystore/codice-vivo.jks"
 val canSign = storePass != null && rootProject.file(storePath).exists()
 
 android {
@@ -25,7 +25,8 @@ android {
     compileSdk = 35
     defaultConfig {
         applicationId = "com.biblia.estudio"
-        minSdk = 26
+        // 28 (Android 9): necesario para la rotación de la clave de firma (APK Signature Scheme v3)
+        minSdk = 28
         targetSdk = 35
         versionCode = 9
         versionName = "1.7"
@@ -35,13 +36,12 @@ android {
         if (canSign) create("release") {
             storeFile = rootProject.file(storePath)
             storePassword = storePass
-            keyAlias = secret("keyAlias", "CODICE_KEY_ALIAS") ?: "biblia"
+            keyAlias = secret("keyAlias", "CODICE_KEY_ALIAS") ?: "codice"
             keyPassword = keyPass
         }
     }
     buildTypes {
-        // Sin la clave, la versión de depuración usa la clave de depuración estándar (no se puede instalar encima de la publicada).
-        if (canSign) debug { signingConfig = signingConfigs.getByName("release") }
+        // La versión de depuración usa la clave de depuración estándar (la publicada lleva además la rotación de clave).
         release {
             // Sin R8: el código probado es exactamente el que se instala.
             isMinifyEnabled = false
@@ -60,7 +60,11 @@ android {
     androidResources { noCompress += listOf("bin") }
     // Esquemas de Room en los assets de depuración (no en release) para probar migraciones con datos reales
     sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")
-    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    packaging {
+        resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+        // Con minSdk 28 el código se guardaría sin comprimir (+34 MB de descarga): se mantiene comprimido
+        dex { useLegacyPackaging = true }
+    }
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
@@ -105,3 +109,30 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+/*
+ * Rotación de la clave de firma (1.7): la clave original quedó publicada, así que la app se firma con una
+ * clave nueva más la «prueba de rotación» keystore/rotacion.lineage (pública: no contiene secretos).
+ * Así la 1.7 se instala encima de las versiones anteriores sin perder datos, y Android deja de aceptar
+ * actualizaciones firmadas con la clave vieja. Tras `assembleRelease` se genera
+ * app/build/outputs/apk/release/codice-vivo-<versión>.apk firmado con la rotación.
+ */
+val firmarConRotacion by tasks.registering(Exec::class) {
+    val lineage = rootProject.file("keystore/rotacion.lineage")
+    val sdkDir = (Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) } }
+        .getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME") ?: "")
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release").get().asFile
+    val name = "codice-vivo-${android.defaultConfig.versionName}.apk"
+    onlyIf { canSign && lineage.exists() && sdkDir.isNotBlank() }
+    doFirst {
+        val bt = File(sdkDir, "build-tools").listFiles()?.filter { File(it, "apksigner").exists() }?.maxByOrNull { it.name }
+            ?: error("No se encontró apksigner en $sdkDir/build-tools")
+        commandLine(File(bt, "apksigner").path, "sign",
+            "--ks", rootProject.file(storePath).path, "--ks-key-alias", secret("keyAlias", "CODICE_KEY_ALIAS") ?: "codice",
+            "--ks-pass", "pass:$storePass", "--key-pass", "pass:$keyPass",
+            "--lineage", lineage.path, "--rotation-min-sdk-version", "28", "--min-sdk-version", "28",
+            "--v1-signing-enabled", "false", "--v2-signing-enabled", "false", "--v3-signing-enabled", "true",
+            "--out", File(apkDir, name).path, File(apkDir, "app-release.apk").path)
+    }
+}
+afterEvaluate { tasks.named("assembleRelease") { finalizedBy(firmarConRotacion) } }

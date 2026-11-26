@@ -42,6 +42,18 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, colores del sistema (Material You), letra serif o sans, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
+### Novedades de la 1.7
+- **Agenda**: actividades que se repiten (cada día, semana, 2 semanas, mes o «el primer lunes / último viernes»),
+  con fecha de fin; cada repetición aparece en su día y tiene su aviso. Botón para **añadirla al calendario** del teléfono.
+- **Lectura en voz alta con la pantalla apagada**, con controles en la notificación y en la pantalla de bloqueo
+  (anterior, pausa/seguir donde quedó, siguiente, detener). Se pausa sola si entra una llamada.
+- **Varias notas por versículo**.
+- Los **puntos** ya no se repiten al desmarcar y volver a marcar un capítulo o un día de plan.
+- Las **preguntas** no se repiten mientras queden otras sin contestar.
+- **Temas**: la lista se desplaza sola al arrastrar un versículo cerca del borde.
+- **Widgets** con colores de modo oscuro.
+- Seguridad: **clave de firma nueva** con rotación (ver «Firma»). Requiere Android 9 o superior.
+
 ### Novedades de la 1.6
 - **Diario** como sección propia en la barra inferior, con **Agenda** de la iglesia: cultos, ayunos, vigilias, devocionales,
   campañas, estudios, reuniones… con nombre, día, hora, lugar, notas y **aviso** (a la hora, 15 min, 1 h, 3 h o 1 día antes).
@@ -54,10 +66,10 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
   y marca de nota MacArthur más discreta en el lector.
 
 ### Publicar una versión nueva (para que llegue el aviso)
-1. Sube `versionCode` y `versionName` en `app/build.gradle.kts` y compila el APK.
-2. Súbelo a `apk/` en `main`.
-3. En el repositorio `codice-vivo-web`, actualiza `public/android-version.json` (número, nombre, enlace y notas),
-   ejecuta `npm run build` y sube a `main`. Las apps instaladas lo verán en las siguientes 24 horas.
+1. Sube `versionCode` y `versionName` en `app/build.gradle.kts` y ejecuta `./gradlew assembleRelease`.
+2. Crea una *Release* en GitHub con la etiqueta `vX.Y` y adjunta `codice-vivo-X.Y.apk`.
+3. Actualiza `android-version.json` (en la raíz de este repositorio) con el nuevo `versionCode`, el nombre,
+   el enlace de la Release y las notas, y súbelo a `main`. Las apps instaladas lo verán en las siguientes 24 horas.
 
 ### Novedades de la 1.5
 - **Diario**: peticiones de oración con «respondida» (fecha y cómo respondió Dios) y entradas de diario; se puede orar desde un versículo (botón «Orar» del lector).
@@ -74,22 +86,27 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
 - Lector más ligero: solo carga tus resaltados y notas de los capítulos visibles.
 
 ## Instalar el APK
-Descarga [`apk/codice-vivo-1.6.apk`](apk/codice-vivo-1.6.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
-Se instala encima de la versión anterior sin perder datos (misma clave de firma).
-Nota: cada APK pesa ~55 MB y engorda el historial de git; a futuro conviene publicarlos en **Releases** en vez de guardarlos aquí.
+Descarga el APK de la última versión en **[Releases](https://github.com/soydarwinruiz/biblia-estudio/releases/latest)**,
+ábrelo en el teléfono y permite instalar apps de fuentes desconocidas. Requiere **Android 9 o superior**.
+Se instala encima de la versión anterior sin perder datos. Los APK ya no se guardan en git (cada uno pesaba ~55 MB).
 
 ## Firma
-El APK se firma con `keystore/biblia-release.jks`. Las contraseñas **ya no están en el código**: copia
-`keystore.properties.example` como `keystore.properties` (ignorado por git) y escríbelas ahí, o usa las variables de entorno
-`CODICE_STORE_PASSWORD` y `CODICE_KEY_PASSWORD`. Sin ellas, la versión de release sale sin firmar.
-Usa siempre esta misma clave para que las actualizaciones se instalen sobre la versión anterior sin perder datos. Mantén el repositorio privado.
+Desde la 1.7 la app se firma con una **clave nueva** (`keystore/codice-vivo.jks`, que **no** está en el repositorio:
+la guarda el autor). La clave original quedó publicada al hacer público el repositorio, así que se aplicó la
+**rotación de clave de Android** (APK Signature Scheme v3): `keystore/rotacion.lineage` (público, sin secretos)
+demuestra que la clave vieja autoriza a la nueva. Por eso la 1.7 se instala encima de las anteriores sin perder datos
+y, desde entonces, Android rechaza actualizaciones firmadas con la clave vieja.
+
+Para compilar una versión firmada: copia `keystore.properties.example` como `keystore.properties` con la contraseña,
+pon la clave en `keystore/` y ejecuta `./gradlew assembleRelease`. El APK listo para publicar sale en
+`app/build/outputs/apk/release/codice-vivo-<versión>.apk` (firmado con la rotación).
 
 ## Compilar
 Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
 ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/app-release.apk
-./gradlew testDebugUnitTest    # 23 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda, SM-2 y pantallas
+adb install -r app/build/outputs/apk/release/codice-vivo-1.7.apk
+./gradlew testDebugUnitTest    # 32 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
 ```
 
 ## Regenerar la base de contenido
