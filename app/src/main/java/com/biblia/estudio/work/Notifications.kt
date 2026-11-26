@@ -126,7 +126,7 @@ class ReminderReceiver : BroadcastReceiver() {
             try {
                 val app = context.applicationContext
                 if (intent.action == EventReminders.ACTION_EVENT) {
-                    runCatching { EventReminders.show(app, intent.getLongExtra(EventReminders.EXTRA_ID, -1)) }
+                    runCatching { EventReminders.show(app, intent.getLongExtra(EventReminders.EXTRA_ID, -1), intent.getLongExtra(EventReminders.EXTRA_AT, 0)) }
                     return@launch
                 }
                 withTimeoutOrNull(8_000) {

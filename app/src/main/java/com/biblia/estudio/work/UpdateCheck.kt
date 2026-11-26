@@ -28,8 +28,8 @@ import java.util.concurrent.TimeUnit
  * con el número de la última versión. No envía ningún dato personal. Se puede desactivar en Ajustes.
  */
 object UpdateCheck {
-    /** Publicado por GitHub Pages desde el repositorio codice-vivo-web (carpeta public/). */
-    const val URL_VERSION = "https://soydarwinruiz.github.io/codice-vivo-web/android-version.json"
+    /** Archivo en la raíz de este repositorio (público): se edita al publicar cada versión. */
+    const val URL_VERSION = "https://raw.githubusercontent.com/soydarwinruiz/biblia-estudio/main/android-version.json"
     private const val WORK = "update_check"
     private const val NOTIF_UPDATE = 3
     private const val NOTIF_WHATS_NEW = 4

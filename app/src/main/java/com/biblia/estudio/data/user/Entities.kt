@@ -155,4 +155,21 @@ data class JournalEntry(
     @ColumnInfo(defaultValue = "0") val eventAt: Long = 0,
     @ColumnInfo(defaultValue = "''") val place: String = "",
     @ColumnInfo(defaultValue = "-1") val reminderMinutes: Int = -1,
+    // Repetición (v6): "" (no se repite), "weekly", "biweekly", "monthly" (mismo día del mes) o "monthly_nth" (p. ej. primer lunes).
+    @ColumnInfo(defaultValue = "''") val repeatRule: String = "",
+    /** Último día (millis) en que se repite; 0 = sin fin. */
+    @ColumnInfo(defaultValue = "0") val repeatUntil: Long = 0,
 )
+
+/**
+ * Puntos ya otorgados (v6), para no darlos dos veces: p. ej. «ch:43:3» (capítulo leído)
+ * o «plan:1:20000:15» (día 15 del plan 1 iniciado el día 20000). Desmarcar y volver a marcar no suma de nuevo.
+ */
+@Serializable
+@Entity(tableName = "point_awards")
+data class PointAward(@PrimaryKey val key: String, val at: Long = System.currentTimeMillis())
+
+/** Preguntas ya contestadas (v6), para no repetirlas mientras queden otras sin ver. */
+@Serializable
+@Entity(tableName = "quiz_seen")
+data class QuizSeen(@PrimaryKey val id: Int, val day: Long)

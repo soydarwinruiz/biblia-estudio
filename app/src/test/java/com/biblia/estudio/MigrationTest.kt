@@ -50,4 +50,18 @@ class MigrationTest {
         }
         db.close()
     }
+
+    @Test fun from5to6AddsRepeatAndAwards() {
+        helper.createDatabase("mig6.db", 5).use { db ->
+            db.execSQL("INSERT INTO journal(kind,title,text,book,chapter,verse,answered,answeredAt,answerNote,created,updated,eventType,eventAt,place,reminderMinutes) VALUES ('event','Culto','',0,0,0,0,0,'',1,1,'Culto',1800000000000,'Templo',60)")
+            db.execSQL("INSERT INTO chapters_read(book,chapter,readAt) VALUES (43,3,1)")
+        }
+        val db = helper.runMigrationsAndValidate("mig6.db", 6, true)
+        db.query("SELECT title, place, repeatRule, repeatUntil FROM journal").use {
+            it.moveToFirst(); assertEquals("Culto", it.getString(0)); assertEquals("Templo", it.getString(1)); assertEquals("", it.getString(2)); assertEquals(0L, it.getLong(3))
+        }
+        db.query("SELECT COUNT(*) FROM point_awards").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+        db.query("SELECT COUNT(*) FROM quiz_seen").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+        db.close()
+    }
 }

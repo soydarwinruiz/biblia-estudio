@@ -36,7 +36,9 @@ fun QuizScreen(nav: NavController, practice0: Boolean) {
     val categories by produceState(emptyList<String>()) { value = c.content.quizCategories() }
     val questions by produceState<List<QuizQuestion>?>(null, practice, category, round) {
         value = null
-        value = if (practice) c.content.randomQuiz(10, category) else c.content.dailyQuiz(day)
+        // Preguntas contestadas antes (las de hoy no, para que el cuestionario del día no cambie al reabrirlo)
+        val seen = c.user.dao.quizSeenBefore(if (practice) day + 1 else day).toSet()
+        value = if (practice) c.content.randomQuiz(10, category, seen) else c.content.dailyQuiz(day, exclude = seen)
     }
     var index by remember(questions) { mutableIntStateOf(0) }
     var chosen by remember(questions, index) { mutableStateOf<Int?>(null) }
@@ -103,7 +105,10 @@ fun QuizScreen(nav: NavController, practice0: Boolean) {
                 Button(onClick = {
                     if (index + 1 < qs.size) index++ else {
                         finished = true
-                        scope.launch { if (practice) c.user.practicePoints(correct) else c.user.saveQuiz(correct, qs.size) }
+                        scope.launch {
+                            c.user.dao.markQuizSeen(qs.map { com.biblia.estudio.data.user.QuizSeen(it.id, day) })
+                            if (practice) c.user.practicePoints(correct) else c.user.saveQuiz(correct, qs.size)
+                        }
                     }
                 }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(if (index + 1 < qs.size) "Siguiente" else "Ver resultado") }
             }

@@ -115,6 +115,58 @@ class ContentTest {
         assertEquals(listOf(1, 40, 46), books())
     }
 
+    @Test fun audioPlayerStates() {
+        runBlocking { c.init() }
+        val a = c.audio
+        fun waitFor(cond: () -> Boolean) {
+            repeat(200) { org.robolectric.shadows.ShadowLooper.idleMainLooper(); if (cond()) return; Thread.sleep(20) }
+            org.junit.Assert.fail("condición no alcanzada; estado=${a.state.value}")
+        }
+        a.play(43, 3, "RVR1960")
+        waitFor { a.state.value?.playing == true }
+        assertEquals(43, a.state.value!!.book); assertEquals(3, a.state.value!!.chapter)
+        // el servicio de primer plano se inicia para seguir con la pantalla apagada
+        val started = org.robolectric.Shadows.shadowOf(ApplicationProvider.getApplicationContext<BibliaApp>()).nextStartedService
+        assertEquals(com.biblia.estudio.work.AudioService::class.java.name, started?.component?.className)
+        a.pause(); org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals(false, a.state.value!!.playing)
+        a.next()
+        waitFor { a.state.value?.chapter == 4 && a.state.value?.playing == true }
+        a.sleepIn(30); assertTrue(a.sleepAt.value > System.currentTimeMillis())
+        a.stop(); org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        assertEquals(null, a.state.value); assertEquals(0L, a.sleepAt.value)
+    }
+
+    @Test fun pointsAreNotRepeated() = runBlocking {
+        c.init()
+        val u = c.user
+        val before = u.dao.dumpActivity().sumOf { it.points }
+        assertTrue(u.markChapterRead(1, 1, true))     // primera vez: +10
+        u.markChapterRead(1, 1, false)
+        assertEquals(false, u.markChapterRead(1, 1, true))  // desmarcar y volver a marcar: nada
+        u.enroll(2)
+        assertTrue(u.markPlanDay(2, 1, true))
+        u.markPlanDay(2, 1, false)
+        assertEquals(false, u.markPlanDay(2, 1, true))
+        assertEquals(before + com.biblia.estudio.data.user.Points.CHAPTER + com.biblia.estudio.data.user.Points.PLAN_DAY, u.dao.dumpActivity().sumOf { it.points })
+        // El registro viaja en el respaldo: restaurar y volver a marcar tampoco suma
+        u.markChapterRead(1, 1, false)
+        u.importJson(u.exportJson())
+        assertEquals(false, u.markChapterRead(1, 1, true))
+    }
+
+    @Test fun quizAvoidsSeenQuestions() = runBlocking {
+        c.init()
+        val day = 20000L
+        val first = c.content.dailyQuiz(day)
+        assertEquals(first.map { it.id }, c.content.dailyQuiz(day).map { it.id })   // estable durante el día
+        val seen = first.map { it.id }.toSet()
+        val other = c.content.dailyQuiz(day, exclude = seen)
+        assertTrue("no repite: ${other.map { it.id }}", other.none { it.id in seen })
+        val practice = c.content.randomQuiz(10, null, seen)
+        assertTrue(practice.none { it.id in seen })
+    }
+
     @Test fun updateInfoParsing() {
         val i = com.biblia.estudio.work.UpdateCheck.parse("""{"versionCode": 8, "versionName": "1.6", "url": "https://x/y.apk", "notes": "Novedades"}""")!!
         assertEquals(8L, i.versionCode); assertEquals("1.6", i.versionName); assertEquals("https://x/y.apk", i.url)

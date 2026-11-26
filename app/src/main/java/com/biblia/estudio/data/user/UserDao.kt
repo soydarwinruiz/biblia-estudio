@@ -89,6 +89,7 @@ interface UserDao {
     // Planes
     @Query("SELECT * FROM plan_enrollments WHERE active=1") fun enrollments(): Flow<List<PlanEnrollment>>
     @Upsert suspend fun upsertEnrollment(e: PlanEnrollment)
+    @Query("SELECT * FROM plan_enrollments WHERE planId=:planId") suspend fun enrollment(planId: Int): PlanEnrollment?
     @Query("DELETE FROM plan_enrollments WHERE planId=:planId") suspend fun deleteEnrollment(planId: Int)
     @Query("DELETE FROM plan_days_done WHERE planId=:planId") suspend fun clearPlanDays(planId: Int)
     @Query("SELECT * FROM plan_days_done WHERE planId=:planId") fun planDaysDone(planId: Int): Flow<List<PlanDayDone>>
@@ -168,6 +169,13 @@ interface UserDao {
     @Query("SELECT * FROM journal WHERE title LIKE '%' || :q || '%' OR text LIKE '%' || :q || '%' OR answerNote LIKE '%' || :q || '%' ORDER BY updated DESC LIMIT 50")
     suspend fun searchJournal(q: String): List<JournalEntry>
 
+    // Puntos ya otorgados y preguntas vistas
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertAward(a: PointAward): Long
+    @Query("SELECT COUNT(*) FROM point_awards") suspend fun awardCount(): Int
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun markQuizSeen(x: List<QuizSeen>)
+    @Query("SELECT id FROM quiz_seen WHERE day < :day") suspend fun quizSeenBefore(day: Long): List<Int>
+    @Query("SELECT * FROM journal WHERE kind='event'") suspend fun allEvents(): List<JournalEntry>
+
     // Respaldo
     @Query("SELECT * FROM highlights") suspend fun dumpHighlights(): List<Highlight>
     @Query("SELECT * FROM verse_notes") suspend fun dumpNotes(): List<VerseNote>
@@ -187,6 +195,8 @@ interface UserDao {
     @Query("SELECT * FROM memory_verses") suspend fun dumpMemory(): List<MemoryVerse>
     @Query("SELECT * FROM word_highlights") suspend fun dumpWordHighlights(): List<WordHighlight>
     @Query("SELECT * FROM journal") suspend fun dumpJournal(): List<JournalEntry>
+    @Query("SELECT * FROM point_awards") suspend fun dumpAwards(): List<PointAward>
+    @Query("SELECT * FROM quiz_seen") suspend fun dumpQuizSeen(): List<QuizSeen>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insHighlights(x: List<Highlight>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insNotes(x: List<VerseNote>)
@@ -206,4 +216,6 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insMemory(x: List<MemoryVerse>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insWordHighlights(x: List<WordHighlight>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insJournal(x: List<JournalEntry>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insAwards(x: List<PointAward>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insQuizSeen(x: List<QuizSeen>)
 }

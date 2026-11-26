@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import com.biblia.estudio.app
 import com.biblia.estudio.data.content.PassageRef
 import com.biblia.estudio.data.user.JournalEntry
+import com.biblia.estudio.domain.Recurrence
 import com.biblia.estudio.ui.components.BackTopBar
 import com.biblia.estudio.ui.components.EmptyState
 import com.biblia.estudio.ui.openRef
@@ -77,20 +78,21 @@ fun JournalScreen(nav: NavController, initialTab: Int = 0) {
             LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
                 if (tab == 0) {
                     val startToday = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-                    val upcoming = list.filter { it.eventAt >= startToday }
-                    val past = list.filter { it.eventAt < startToday }.reversed()
+                    // Cada repetición en su fecha, para las próximas 8 semanas
+                    val upcoming = upcomingOccurrences(list, startToday, startToday + 56 * 86_400_000L)
+                    val past = list.filter { Recurrence.next(it.eventAt, it.repeatRule, it.repeatUntil, startToday) == null }.sortedByDescending { it.eventAt }
                     if (list.isEmpty()) item {
                         EmptyState(Icons.Filled.Event, "Agenda vacía", "Programa cultos, ayunos, vigilias, devocionales, campañas y demás actividades con su día, hora y lugar. Te avisaremos antes de cada una.")
                     }
                     var lastDay = ""
-                    upcoming.forEach { e ->
-                        val day = dayFmt.format(Date(e.eventAt)).replaceFirstChar { it.uppercase() }
+                    upcoming.forEach { (e, at) ->
+                        val day = dayFmt.format(Date(at)).replaceFirstChar { it.uppercase() }
                         val header = if (day != lastDay) day else null
                         lastDay = day
-                        item(key = e.id) {
-                            if (header != null) Text(if (isToday(e.eventAt)) "Hoy · $header" else header, Modifier.padding(start = 16.dp, top = 16.dp, bottom = 2.dp),
+                        item(key = "${e.id}_$at") {
+                            if (header != null) Text(if (isToday(at)) "Hoy · $header" else header, Modifier.padding(start = 16.dp, top = 16.dp, bottom = 2.dp),
                                 style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            EventRow(e) { nav.navigate("journal/${e.id}?kind=event") }
+                            EventRow(e, at = at) { nav.navigate("journal/${e.id}?kind=event") }
                         }
                     }
                     if (past.isNotEmpty()) item(key = "past") {
@@ -117,17 +119,24 @@ fun JournalScreen(nav: NavController, initialTab: Int = 0) {
 
 private fun isToday(t: Long) = java.time.Instant.ofEpochMilli(t).atZone(java.time.ZoneId.systemDefault()).toLocalDate() == java.time.LocalDate.now()
 
+/** Repeticiones de las actividades entre [from] y [to], ordenadas: (actividad, fecha). */
+fun upcomingOccurrences(events: List<JournalEntry>, from: Long, to: Long): List<Pair<JournalEntry, Long>> =
+    events.flatMap { e -> Recurrence.occurrences(e.eventAt, e.repeatRule, e.repeatUntil, from, to, 30).map { e to it } }.sortedBy { it.second }
+
 @Composable
-fun EventRow(e: JournalEntry, faded: Boolean = false, onClick: () -> Unit) {
+fun EventRow(e: JournalEntry, faded: Boolean = false, at: Long = e.eventAt, onClick: () -> Unit) {
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
         leadingContent = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(52.dp)) {
                 Text(eventEmoji(e.eventType), style = MaterialTheme.typography.titleLarge)
-                Text(timeFmt.format(Date(e.eventAt)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text(timeFmt.format(Date(at)), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
         },
-        overlineContent = { Text(buildString { append(e.eventType.ifBlank { "Actividad" }); if (faded) append(" · " + fmt(e.eventAt)) }) },
+        overlineContent = { Text(buildString {
+            append(e.eventType.ifBlank { "Actividad" }); if (faded) append(" · " + fmt(e.eventAt))
+            if (e.repeatRule.isNotBlank()) append(" · 🔁 " + Recurrence.label(e.repeatRule, e.eventAt).replaceFirstChar { it.lowercase() })
+        }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         headlineContent = { Text(e.title.ifBlank { e.eventType }, maxLines = 1, overflow = TextOverflow.Ellipsis,
             color = if (faded) MaterialTheme.colorScheme.outline else Color.Unspecified) },
         supportingContent = {
@@ -183,6 +192,9 @@ fun JournalEditScreen(nav: NavController, id: Long, kind: String, ref: PassageRe
     var eventAt by remember(e?.id) { mutableLongStateOf(e?.eventAt ?: 0L) }
     var place by remember(e?.id) { mutableStateOf(e?.place ?: "") }
     var reminder by remember(e?.id) { mutableIntStateOf(e?.reminderMinutes ?: -1) }
+    var repeatRule by remember(e?.id) { mutableStateOf(e?.repeatRule ?: "") }
+    var repeatUntil by remember(e?.id) { mutableLongStateOf(e?.repeatUntil ?: 0L) }
+    var pickUntil by remember { mutableStateOf(false) }
     var pickDate by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -199,7 +211,8 @@ fun JournalEditScreen(nav: NavController, id: Long, kind: String, ref: PassageRe
         val now = System.currentTimeMillis()
         val saved = base.copy(title = title.trim().ifBlank { if (isEvent) eventType else "" }, text = text.trim(), answered = answered,
             answeredAt = if (answered) (base.answeredAt.takeIf { it > 0 } ?: now) else 0, answerNote = answerNote.trim(), updated = now,
-            eventType = eventType, eventAt = eventAt, place = place.trim(), reminderMinutes = reminder)
+            eventType = eventType, eventAt = eventAt, place = place.trim(), reminderMinutes = reminder,
+            repeatRule = repeatRule, repeatUntil = if (repeatRule.isBlank()) 0 else repeatUntil)
         val newId = c.user.dao.upsertJournal(saved)
         if (isEvent) runCatching { com.biblia.estudio.work.EventReminders.schedule(ctx.applicationContext, saved.copy(id = if (base.id > 0) base.id else newId)) }
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { nav.popBackStack() }
@@ -234,12 +247,24 @@ fun JournalEditScreen(nav: NavController, id: Long, kind: String, ref: PassageRe
                 }
                 OutlinedTextField(place, { place = it }, Modifier.fillMaxWidth().padding(top = 12.dp), singleLine = true,
                     label = { Text("Lugar") }, leadingIcon = { Icon(Icons.Filled.Place, null) }, placeholder = { Text("Templo, casa, dirección…") })
+                Text("Repetir", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 16.dp))
+                FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Recurrence.RULES.forEach { r -> FilterChip(repeatRule == r, { repeatRule = r }, { Text(Recurrence.label(r, eventAt)) }) }
+                }
+                if (repeatRule.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Hasta: ", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { pickUntil = true }) { Text(if (repeatUntil > 0) shortDayFmt.format(Date(repeatUntil)) else "sin fecha de fin") }
+                    if (repeatUntil > 0) TextButton(onClick = { repeatUntil = 0 }) { Text("Quitar") }
+                }
                 Text("Aviso", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 16.dp))
                 FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     REMINDER_OPTIONS.forEach { (m, label) -> FilterChip(reminder == m, { reminder = m }, { Text(label) }) }
                 }
                 OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().heightIn(min = 120.dp).padding(top = 8.dp),
                     label = { Text("Notas (opcional)") }, placeholder = { Text("Qué llevar, horario, responsables, motivo de oración…") })
+                OutlinedButton(onClick = {
+                    addToPhoneCalendar(ctx, title.ifBlank { eventType }, eventType, eventAt, place, text, repeatRule, repeatUntil)
+                }, modifier = Modifier.padding(top = 12.dp)) { Icon(Icons.Filled.EventAvailable, null); Text("  Añadir al calendario del teléfono") }
             } else {
                 OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), singleLine = true,
                     label = { Text(if (isPrayer) "Por qué o por quién oras" else "Título (opcional)") })
@@ -276,6 +301,18 @@ fun JournalEditScreen(nav: NavController, id: Long, kind: String, ref: PassageRe
             }) { Text("Aceptar") } },
             dismissButton = { TextButton(onClick = { pickTime = false }) { Text("Cancelar") } })
     }
+    if (pickUntil) {
+        val base = if (repeatUntil > 0) repeatUntil else eventAt + 90L * 86_400_000L
+        val state = rememberDatePickerState(initialSelectedDateMillis = java.time.Instant.ofEpochMilli(base).atZone(zone).toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())
+        DatePickerDialog(onDismissRequest = { pickUntil = false }, confirmButton = {
+            TextButton(onClick = {
+                state.selectedDateMillis?.let { utc ->
+                    repeatUntil = java.time.Instant.ofEpochMilli(utc).atZone(java.time.ZoneOffset.UTC).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+                }
+                pickUntil = false
+            }) { Text("Aceptar") }
+        }, dismissButton = { TextButton(onClick = { pickUntil = false }) { Text("Cancelar") } }) { DatePicker(state) }
+    }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("¿Eliminar?") },
         text = { Text("Se borrará esta ${if (isEvent) "actividad" else "entrada"} del diario.") },
         confirmButton = { TextButton(onClick = {
@@ -285,4 +322,18 @@ fun JournalEditScreen(nav: NavController, id: Long, kind: String, ref: PassageRe
             }
         }) { Text("Eliminar") } },
         dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } })
+}
+
+/** Abre la app de calendario del teléfono con la actividad lista para guardar (sin pedir permisos). */
+fun addToPhoneCalendar(ctx: android.content.Context, title: String, type: String, at: Long, place: String, notes: String, rule: String, until: Long) {
+    val i = android.content.Intent(android.content.Intent.ACTION_INSERT, android.provider.CalendarContract.Events.CONTENT_URI)
+        .putExtra(android.provider.CalendarContract.Events.TITLE, title)
+        .putExtra(android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME, at)
+        .putExtra(android.provider.CalendarContract.EXTRA_EVENT_END_TIME, at + 3_600_000L)
+        .putExtra(android.provider.CalendarContract.Events.EVENT_LOCATION, place)
+        .putExtra(android.provider.CalendarContract.Events.DESCRIPTION, listOf(type, notes).filter { it.isNotBlank() }.joinToString("\n"))
+    Recurrence.rrule(rule, at, until)?.let { i.putExtra(android.provider.CalendarContract.Events.RRULE, it) }
+    try { ctx.startActivity(i) } catch (e: Exception) {
+        android.widget.Toast.makeText(ctx, "No hay una app de calendario instalada", android.widget.Toast.LENGTH_LONG).show()
+    }
 }

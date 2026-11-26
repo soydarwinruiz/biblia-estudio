@@ -27,14 +27,12 @@ class Speaker(context: Context) {
     /** Emite la clave de cada lectura que termina completa (no si se detiene). */
     private val _finished = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val finished: SharedFlow<String> = _finished
-    /** Hora (millis) en que se apagará la lectura, o 0 si no hay temporizador. */
-    private val _sleepAt = MutableStateFlow(0L)
-    val sleepAt: StateFlow<Long> = _sleepAt
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var sleepJob: Job? = null
     private var ready = false
-    private var pending: Pair<String, List<String>>? = null
+    private var pending: Triple<String, List<String>, Int>? = null
+    /** Índice global del último fragmento de la lectura en curso. */
+    @Volatile private var lastIndex = -1
+    @Volatile private var activeKey: String? = null
     private var localeTag = ""
     var rate: Float = 1f; private set
 
@@ -42,17 +40,17 @@ class Speaker(context: Context) {
         ready = status == TextToSpeech.SUCCESS
         if (ready) {
             applyLocale()
-            pending?.let { (k, p) -> speak(k, p) }; pending = null
+            pending?.let { (k, p, o) -> speak(k, p, o) }; pending = null
         }
     }
 
     init {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String) { _current.value = id.substringAfterLast(":").toIntOrNull() ?: -1 }
+            override fun onStart(id: String) { _current.value = id.substringAfterLast("#").toIntOrNull() ?: -1 }
             override fun onDone(id: String) {
-                if (id.endsWith(":last")) {
-                    val key = id.removeSuffix(":last")
-                    _speaking.value = null; _current.value = -1
+                val key = id.substringBeforeLast("#"); val idx = id.substringAfterLast("#").toIntOrNull() ?: return
+                if (key == activeKey && idx == lastIndex) {
+                    _speaking.value = null; _current.value = -1; activeKey = null
                     _finished.tryEmit(key)
                 }
             }
@@ -77,27 +75,22 @@ class Speaker(context: Context) {
     fun availableSpanish(): List<Locale> =
         if (!ready) emptyList() else runCatching { tts.availableLanguages.filter { it.language == "es" }.sortedBy { it.displayCountry } }.getOrDefault(emptyList())
 
-    /** Lee una lista de fragmentos (p. ej. versículos) en orden. */
-    fun speak(key: String, parts: List<String>) {
-        if (!ready) { pending = key to parts; _speaking.value = key; return }
+    /**
+     * Lee una lista de fragmentos (p. ej. versículos) en orden. [offset] = índice del primer fragmento
+     * dentro de la lectura completa (para seguir donde se pausó sin perder la numeración).
+     */
+    fun speak(key: String, parts: List<String>, offset: Int = 0) {
+        if (!ready) { pending = Triple(key, parts, offset); _speaking.value = key; return }
+        activeKey = null
         tts.stop(); tts.setSpeechRate(rate)
+        if (parts.isEmpty()) { _speaking.value = null; return }
+        activeKey = key; lastIndex = offset + parts.lastIndex
         _speaking.value = key
-        parts.forEachIndexed { i, p ->
-            val id = if (i == parts.lastIndex) "$key:last" else "$key:$i"
-            tts.speak(p, TextToSpeech.QUEUE_ADD, null, id)
-        }
-        if (parts.isEmpty()) _speaking.value = null
+        parts.forEachIndexed { i, p -> tts.speak(p, TextToSpeech.QUEUE_ADD, null, "$key#${offset + i}") }
     }
 
     fun toggle(key: String, parts: List<String>) { if (_speaking.value == key) stop() else speak(key, parts) }
 
-    fun stop() { pending = null; tts.stop(); _speaking.value = null; _current.value = -1 }
+    fun stop() { pending = null; activeKey = null; tts.stop(); _speaking.value = null; _current.value = -1 }
 
-    /** Temporizador para dormir: detiene la lectura dentro de [minutes] minutos (0 = cancelar). */
-    fun sleepIn(minutes: Int) {
-        sleepJob?.cancel(); _sleepAt.value = 0
-        if (minutes <= 0) return
-        _sleepAt.value = System.currentTimeMillis() + minutes * 60_000L
-        sleepJob = scope.launch { delay(minutes * 60_000L); _sleepAt.value = 0; stop() }
-    }
 }

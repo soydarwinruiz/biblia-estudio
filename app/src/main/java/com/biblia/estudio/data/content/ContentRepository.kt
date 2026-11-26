@@ -260,9 +260,16 @@ class ContentRepository(private val context: Context) {
     suspend fun lessonTitles(): List<Pair<Int, String>> = io { d.list("SELECT id,title FROM lessons ORDER BY id") { it.getInt(0) to it.getString(1) } }
 
     /** Cinco preguntas del día, deterministas según la fecha, con dificultad mezclada. */
-    suspend fun dailyQuiz(day: Long, size: Int = 5): List<QuizQuestion> = io {
+    /**
+     * Cinco preguntas del día, deterministas según la fecha. [exclude] = preguntas ya contestadas antes de hoy:
+     * se evitan mientras queden suficientes sin ver en cada dificultad.
+     */
+    suspend fun dailyQuiz(day: Long, size: Int = 5, exclude: Set<Int> = emptySet()): List<QuizQuestion> = io {
         val rnd = java.util.Random(day * 7919 + 13)
-        val byDiff = (1..3).associateWith { diff -> d.list("SELECT id FROM quiz WHERE difficulty=?", diff) { it.getInt(0) } }
+        val byDiff = (1..3).associateWith { diff ->
+            val all = d.list("SELECT id FROM quiz WHERE difficulty=? ORDER BY id", diff) { it.getInt(0) }
+            all.filter { it !in exclude }.takeIf { it.size >= size } ?: all
+        }
         val pattern = listOf(1, 1, 2, 2, 3, 2, 1, 3, 2, 1)
         val ids = LinkedHashSet<Int>()
         var i = 0
@@ -274,10 +281,12 @@ class ContentRepository(private val context: Context) {
         ids.mapNotNull { quizById(it) }
     }
 
-    suspend fun randomQuiz(size: Int, category: String? = null): List<QuizQuestion> = io {
-        val ids = if (category == null) d.list("SELECT id FROM quiz ORDER BY RANDOM() LIMIT $size") { it.getInt(0) }
-        else d.list("SELECT id FROM quiz WHERE category=? ORDER BY RANDOM() LIMIT $size", category) { it.getInt(0) }
-        ids.mapNotNull { quizById(it) }
+    /** Práctica: primero preguntas no vistas ([exclude]); si no alcanzan, se completan con otras. */
+    suspend fun randomQuiz(size: Int, category: String? = null, exclude: Set<Int> = emptySet()): List<QuizQuestion> = io {
+        val all = if (category == null) d.list("SELECT id FROM quiz ORDER BY RANDOM()") { it.getInt(0) }
+        else d.list("SELECT id FROM quiz WHERE category=? ORDER BY RANDOM()", category) { it.getInt(0) }
+        val (fresh, seen) = all.partition { it !in exclude }
+        (fresh + seen).take(size).mapNotNull { quizById(it) }
     }
 
     suspend fun quizCategories(): List<String> = io { d.list("SELECT DISTINCT category FROM quiz ORDER BY category") { it.getString(0) } }
