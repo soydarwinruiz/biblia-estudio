@@ -35,6 +35,7 @@ import com.biblia.estudio.ui.openRef
 import com.biblia.estudio.ui.openPulpit
 import com.biblia.estudio.ui.theme.Serif
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 
 private val TABS = listOf("Pasaje", "Contexto", "Exégesis", "Hermenéutica", "Homilética")
 
@@ -56,14 +57,29 @@ fun StudyEditorScreen(nav: NavController, settings: AppSettings, id: Long, initi
     var preview by remember { mutableStateOf<PassageRef?>(null) }
     val s = study
     fun upd(f: (Study) -> Study) { study = study?.let(f); dirty = true }
-    fun save(then: () -> Unit = {}) = scope.launch {
-        val cur = study ?: return@launch
+    val saveLock = remember { kotlinx.coroutines.sync.Mutex() }
+    var savedNote by remember { mutableStateOf("") }
+    /** Guarda (una sola escritura a la vez, para no duplicar un estudio nuevo). */
+    suspend fun persist() = saveLock.withLock {
+        val cur = study ?: return@withLock
+        if (!dirty && savedId > 0) return@withLock
         val newId = c.user.saveStudy(cur.copy(id = savedId))
-        savedId = newId; study = cur.copy(id = newId); dirty = false
+        savedId = newId; study = study?.copy(id = newId); dirty = false
+        savedNote = "Guardado " + java.text.SimpleDateFormat("HH:mm", java.util.Locale("es")).format(java.util.Date())
+    }
+    fun save(then: () -> Unit = {}) = scope.launch {
+        persist()
         Toast.makeText(ctx, "Estudio guardado", Toast.LENGTH_SHORT).show(); then()
     }
+    // Guardado automático: 1,5 s después de dejar de escribir
+    LaunchedEffect(study) { if (dirty) { kotlinx.coroutines.delay(1500); persist() } }
+    // Salir con el gesto o el botón «atrás» del teléfono también guarda
+    /** Guarda y sale (la navegación siempre en el hilo principal). */
+    fun leave() = scope.launch { persist(); kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { nav.popBackStack() } }
+    androidx.activity.compose.BackHandler(enabled = dirty) { leave() }
     Scaffold(topBar = {
-        BackTopBar(s?.title ?: "Estudio", { if (dirty) save { nav.popBackStack() } else nav.popBackStack() }) {
+        BackTopBar(s?.title ?: "Estudio", { leave() }) {
+            if (savedNote.isNotBlank() && !dirty) Text(savedNote, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
             Box {
                 IconButton(onClick = { shareMenu = true }) { Icon(Icons.Filled.Share, "Compartir y exportar") }
                 DropdownMenu(shareMenu, { shareMenu = false }) {

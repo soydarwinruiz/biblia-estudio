@@ -28,8 +28,8 @@ android {
         // 28 (Android 9): necesario para la rotación de la clave de firma (APK Signature Scheme v3)
         minSdk = 28
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.7"
+        versionCode = 10
+        versionName = "1.8"
     }
     signingConfigs {
         // Clave propia y estable: permite instalar actualizaciones sin desinstalar.

@@ -18,6 +18,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.animation.animateContentSize
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,6 +103,13 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
             })
     }) { pad ->
         val d = data
+        val opened = remember { mutableStateOf(emptySet<String>()) }
+        val manual = remember(settings.todayCollapsed) { settings.todayCollapsed.split(",").filter { it.isNotBlank() }.toSet() }
+        val fold = Fold(manual, opened) { k -> scope.launch { c.settings.update { st ->
+            val cur = st.todayCollapsed.split(",").filter { it.isNotBlank() }.toSet()
+            st.copy(todayCollapsed = (if (k in cur) cur - k else cur + k).joinToString(","))
+        } } }
+        CompositionLocalProvider(LocalFold provides fold) {
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
             Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.navigate("progress") },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
@@ -137,7 +147,7 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
             }
             if (d == null) { LinearProgressIndicator(Modifier.fillMaxWidth().padding(16.dp)); return@Column }
 
-            DailyCard("Versículo del día", "verse" in doneTypes, onDone = mark("verse")) {
+            DailyCard("Versículo del día", "verse" in doneTypes, onDone = mark("verse"), summary = c.content.label(d.verseRef)) {
                 Text("«${d.verseText}»", style = MaterialTheme.typography.titleMedium.copy(fontFamily = Serif, fontStyle = FontStyle.Italic))
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,27 +159,27 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
                     TextButton(onClick = { nav.openRef(d.verseRef) }) { Text("Contexto") }
                 }
             }
-            DailyCard("Pasaje del día", "passage" in doneTypes, onDone = mark("passage")) {
+            DailyCard("Pasaje del día", "passage" in doneTypes, onDone = mark("passage"), summary = d.passage.title + " · " + c.content.label(d.passage.ref)) {
                 Text(d.passage.title, style = MaterialTheme.typography.titleMedium)
                 Text(c.content.label(d.passage.ref), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(4.dp))
                 Text(d.passagePreview, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif))
                 Row { Spacer(Modifier.weight(1f)); FilledTonalButton(onClick = { mark("passage")?.invoke(); nav.openRef(d.passage.ref) }) { Text("Leer pasaje") } }
             }
-            DailyCard("Lección del día", "lesson" in doneTypes, onDone = mark("lesson")) {
+            DailyCard("Lección del día", "lesson" in doneTypes, onDone = mark("lesson"), summary = d.lesson.title) {
                 Text(d.lesson.title, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(d.lesson.content, maxLines = 4, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                 Row { Spacer(Modifier.weight(1f)); FilledTonalButton(onClick = { nav.navigate("lesson/${d.lesson.id}") }) { Text("Estudiar lección") } }
             }
-            DailyCard("Oración del día", "prayer" in doneTypes, onDone = mark("prayer")) {
+            DailyCard("Oración del día", "prayer" in doneTypes, onDone = mark("prayer"), summary = d.prayer.title) {
                 Text(d.prayer.title, style = MaterialTheme.typography.titleMedium)
                 Text("Basada en " + c.content.label(d.prayer.ref), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(4.dp))
                 Text(d.prayer.text, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = Serif))
                 Row { Spacer(Modifier.weight(1f)); FilledTonalButton(onClick = { nav.navigate("prayer?o=$offset") }) { Text("Orar") } }
             }
-            if (isToday) DailyCard("Preguntas del día", quizToday != null, onDone = null) {
+            if (isToday) DailyCard("Preguntas del día", quizToday != null, onDone = null, summary = quizToday?.let { "${it.correct} de ${it.total} correctas" } ?: "") {
                 if (quizToday == null) {
                     Text("5 preguntas para poner a prueba tu conocimiento bíblico. ¡Gana hasta 70 puntos!", style = MaterialTheme.typography.bodyMedium)
                     Row { Spacer(Modifier.weight(1f)); Button(onClick = { nav.navigate("quiz") }) { Text("Comenzar") } }
@@ -192,23 +202,39 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
                 }
             }
         }
+        }
     }
 }
 
+/** Estado plegado de las tarjetas de «Hoy»: las completadas se pliegan solas; las demás, si el usuario lo pide (se recuerda). */
+private class Fold(val manual: Set<String>, val opened: MutableState<Set<String>>, val toggle: (String) -> Unit)
+private val LocalFold = compositionLocalOf { Fold(emptySet(), mutableStateOf(emptySet())) {} }
+
 @Composable
-private fun DailyCard(title: String, done: Boolean, onDone: (() -> Unit)?, content: @Composable ColumnScope.() -> Unit) {
-    ElevatedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+private fun DailyCard(title: String, done: Boolean, onDone: (() -> Unit)?, summary: String = "", content: @Composable ColumnScope.() -> Unit) {
+    val fold = LocalFold.current
+    val key = title.substringBefore(" ·")
+    val collapsed = if (done) key !in fold.opened.value else key in fold.manual
+    ElevatedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).animateContentSize()) {
+        Column(Modifier.padding(start = 16.dp, end = 4.dp, top = if (collapsed) 4.dp else 12.dp, bottom = if (collapsed) 4.dp else 16.dp)) {
+            Row(Modifier.fillMaxWidth().clickable(onClickLabel = if (collapsed) "Desplegar" else "Plegar") {
+                if (done) fold.opened.value = if (key in fold.opened.value) fold.opened.value - key else fold.opened.value + key else fold.toggle(key)
+            }, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(title.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    if (collapsed && summary.isNotBlank()) Text(summary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (onDone != null || done) {
                     IconButton(onClick = { onDone?.invoke() }, enabled = !done && onDone != null) {
                         Icon(if (done) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked, if (done) "Completado" else "Marcar como completado",
                             tint = if (done) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline)
                     }
                 }
+                Icon(if (collapsed) Icons.Filled.ExpandMore else Icons.Filled.ExpandLess, if (collapsed) "Desplegar" else "Plegar",
+                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(end = 8.dp))
             }
-            content()
+            if (!collapsed) Column(Modifier.padding(end = 12.dp)) { content() }
         }
     }
 }

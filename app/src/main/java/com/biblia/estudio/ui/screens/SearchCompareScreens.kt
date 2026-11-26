@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -59,7 +60,7 @@ fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String
     var refHit by remember { mutableStateOf<PassageRef?>(null) }
     val recent by c.settings.recentSearches.collectAsState(initial = emptyList())
     var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    suspend fun search() {
+    suspend fun search(remember: Boolean = true) {
         if (query.isBlank()) { results = null; others = null; refHit = null; return }
         refHit = c.refParser?.parseQuery(query)
         when (where) {
@@ -77,18 +78,26 @@ fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String
                 others = notes + studies + journal
             }
         }
-        c.settings.addRecentSearch(query)
+        if (remember) c.settings.addRecentSearch(query)
     }
     // Cada búsqueda nueva cancela la anterior, para que no la sobrescriba un resultado viejo.
     var searching by remember { mutableStateOf(false) }
-    fun run() {
+    fun run(remember: Boolean = true) {
         job?.cancel()
-        job = scope.launch { searching = true; try { search() } finally { searching = false } }
+        job = scope.launch { searching = true; try { search(remember) } finally { searching = false } }
+    }
+    // Buscar mientras se escribe: 0,45 s después de la última tecla (a partir de 3 letras)
+    var typed by remember { mutableStateOf(false) }
+    LaunchedEffect(query) {
+        if (!typed) return@LaunchedEffect
+        if (query.trim().length >= 3) { kotlinx.coroutines.delay(450); run(remember = false) }
+        else if (query.isBlank()) { job?.cancel(); results = null; others = null; refHit = null }
     }
     LaunchedEffect(Unit) { if (initialQuery.isNotBlank()) run() }
     Scaffold(topBar = { BackTopBar("Buscar", { nav.popBackStack() }) }) { pad ->
         Column(Modifier.padding(pad)) {
-            OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true,
+            OutlinedTextField(query, { query = it; typed = true }, Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true,
+                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Clear, "Borrar búsqueda") } },
                 placeholder = { Text("Palabras o referencia (p. ej. «gracia», «Juan 3:16»)") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { run() }))

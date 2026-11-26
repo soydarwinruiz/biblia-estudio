@@ -1,6 +1,6 @@
 {
-  "versionCode": 9,
-  "versionName": "1.7",
-  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.7/codice-vivo-1.7.apk",
-  "notes": "Actividades que se repiten en la agenda, lectura en voz alta con la pantalla apagada y controles, varias notas por versículo y correcciones."
+  "versionCode": 10,
+  "versionName": "1.8",
+  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.8/codice-vivo-1.8.apk",
+  "notes": "Guardado automático de estudios, Deshacer al borrar, volver tras seguir una referencia, botón Aa y pellizcar para agrandar, barras que se ocultan al leer, búsqueda mientras escribes y más."
 }

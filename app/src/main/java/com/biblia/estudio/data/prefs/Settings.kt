@@ -50,6 +50,12 @@ data class AppSettings(
     val onboarded: Boolean = false,
     /** Comprobar una vez al día si hay una versión nueva (único uso de Internet). */
     val updateCheck: Boolean = true,
+    /** Mantener la pantalla encendida mientras el lector está abierto. */
+    val keepScreenOn: Boolean = true,
+    /** Ocultar las barras superior e inferior al desplazarse por el texto (se muestran al subir). */
+    val immersiveReader: Boolean = true,
+    /** Secciones de «Hoy» plegadas por el usuario (claves separadas por comas). */
+    val todayCollapsed: String = "",
 )
 
 data class ReadingPosition(val book: Int = 43, val chapter: Int = 1)
@@ -79,6 +85,9 @@ class SettingsRepository(private val context: Context) {
         val autoBackupDays = intPreferencesKey("auto_backup_days")
         val onboarded = booleanPreferencesKey("onboarded")
         val updateCheck = booleanPreferencesKey("update_check")
+        val keepScreenOn = booleanPreferencesKey("keep_screen_on")
+        val immersiveReader = booleanPreferencesKey("immersive_reader")
+        val todayCollapsed = stringPreferencesKey("today_collapsed")
         // Antiguas: la posición vivía aquí (se migra a «state»).
         val lastBook = intPreferencesKey("last_book")
         val lastChapter = intPreferencesKey("last_chapter")
@@ -118,6 +127,9 @@ class SettingsRepository(private val context: Context) {
         autoBackupDays = this[K.autoBackupDays] ?: 0,
         onboarded = this[K.onboarded] ?: false,
         updateCheck = this[K.updateCheck] ?: true,
+        keepScreenOn = this[K.keepScreenOn] ?: true,
+        immersiveReader = this[K.immersiveReader] ?: true,
+        todayCollapsed = this[K.todayCollapsed] ?: "",
     )
 
     suspend fun current(): AppSettings = settings.first()
@@ -133,6 +145,7 @@ class SettingsRepository(private val context: Context) {
             p[K.compareVersions] = s.compareVersions; p[K.continuous] = s.continuous
             p[K.ttsLocale] = s.ttsLocale; p[K.ttsRate] = s.ttsRate; p[K.audioContinue] = s.audioContinue
             p[K.autoBackupUri] = s.autoBackupUri; p[K.autoBackupDays] = s.autoBackupDays; p[K.onboarded] = s.onboarded; p[K.updateCheck] = s.updateCheck
+            p[K.keepScreenOn] = s.keepScreenOn; p[K.immersiveReader] = s.immersiveReader; p[K.todayCollapsed] = s.todayCollapsed
         }
     }
 

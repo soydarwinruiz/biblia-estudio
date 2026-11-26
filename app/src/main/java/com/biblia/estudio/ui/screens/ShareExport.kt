@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -91,6 +93,7 @@ fun VerseImageDialog(text: String, ref: String, onDismiss: () -> Unit) {
                         Box(Modifier.size(36.dp).clip(CircleShape)
                             .background(Brush.verticalGradient(listOf(Color(st.top), Color(st.bottom))))
                             .then(if (i == styleIdx) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape))
+                            .semantics { contentDescription = "Estilo " + st.name + if (i == styleIdx) ", elegido" else "" }
                             .clickable { styleIdx = i })
                     }
                 }

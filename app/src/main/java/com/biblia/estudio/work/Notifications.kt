@@ -87,6 +87,10 @@ object Notifications {
     fun scheduleMidnight(context: Context) =
         setAlarm(context, nextTrigger(LocalDateTime.now(), 0, 1).millis(), pending(context, ACTION_MIDNIGHT, 2), exact = false)
 
+    /** Enlace interno a un pasaje: codicevivo://ref?b=43&c=3&v=16&ve=16 */
+    fun refUri(r: com.biblia.estudio.data.content.PassageRef): android.net.Uri =
+        android.net.Uri.parse("codicevivo://ref?b=${r.book}&c=${r.chapter}&v=${r.verse}&ve=${r.verseEnd}")
+
     fun canNotify(context: Context): Boolean =
         Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
@@ -101,7 +105,8 @@ object Notifications {
         val ref = c.content.verseOfDay(today())
         val text = c.content.passageText(settings.version, ref)
         val label = c.content.label(ref)
-        val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        // Tocar la notificación abre el versículo directamente en el lector
+        val intent = Intent(Intent.ACTION_VIEW, refUri(ref), context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pi = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val due = c.user.dao.dueMemoryCountNow(today())
         val extra = if (due > 0) "\n\nTienes $due versículo${if (due > 1) "s" else ""} para repasar de memoria." else ""

@@ -34,6 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -56,8 +61,12 @@ import com.biblia.estudio.ui.components.LinkedText
 import com.biblia.estudio.ui.components.RefPreviewDialog
 import com.biblia.estudio.ui.newStudy
 import com.biblia.estudio.ui.openRef
+import com.biblia.estudio.ui.openRefFromReader
 import com.biblia.estudio.ui.openPulpit
 import com.biblia.estudio.ui.theme.HighlightColors
+import com.biblia.estudio.ui.theme.HighlightNames
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.biblia.estudio.ui.theme.Serif
 import com.biblia.estudio.ui.theme.TopicColors
 import com.biblia.estudio.ui.theme.verseTextStyle
@@ -81,7 +90,7 @@ private fun key(b: Int, c: Int, v: Int) = b * 1_000_000L + c * 1000L + v
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argChapter: Int, argVerse: Int, argVerseEnd: Int) {
+fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argChapter: Int, argVerse: Int, argVerseEnd: Int, fromLabel: String = "") {
     val ctx = LocalContext.current; val c = ctx.app; val scope = rememberCoroutineScope()
     var startBook by rememberSaveable(argBook, argChapter) { mutableIntStateOf(if (argBook > 0) argBook else c.position.book) }
     var startChapter by rememberSaveable(argBook, argChapter) { mutableIntStateOf(if (argChapter > 0) argChapter else c.position.chapter) }
@@ -199,9 +208,38 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
     val selBook = selection.firstOrNull()?.book ?: book
     val selChapter = selection.firstOrNull()?.chapter ?: chapter
     val selBlock = blocks.firstOrNull { it.book == selBook && it.chapter == selChapter }
+    var textMenu by remember { mutableStateOf(false) }
+    var overflow by remember { mutableStateOf(false) }
+
+    // Pantalla siempre encendida mientras se lee (opción en «Aa»)
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(settings.keepScreenOn) { view.keepScreenOn = settings.keepScreenOn; onDispose { view.keepScreenOn = false } }
+
+    // Lectura sin distracciones: al bajar se ocultan las barras; al subir vuelven
+    val barsState = com.biblia.estudio.ui.LocalBarsVisible.current
+    var barsVisible by barsState
+    DisposableEffect(Unit) { onDispose { barsVisible = true } }
+    val immersive = settings.immersiveReader
+    val barsScroll = remember(immersive) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (immersive) { if (available.y < -12f) barsVisible = false else if (available.y > 12f) barsVisible = true }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+
+    // Pellizcar para cambiar el tamaño de letra: vista previa en vivo y se guarda al soltar
+    var pinchSize by remember { mutableStateOf<Float?>(null) }
+    val settingsNow by rememberUpdatedState(settings)
+    val fontNow = pinchSize ?: settings.fontSize
 
     Scaffold(
+        modifier = Modifier.nestedScroll(barsScroll),
         topBar = {
+          androidx.compose.animation.AnimatedVisibility(barsVisible || selection.isNotEmpty(),
+              enter = androidx.compose.animation.expandVertically(), exit = androidx.compose.animation.shrinkVertically()) {
+          Column {
             TopAppBar(
                 title = {
                     Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable { showPicker = true }.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -231,13 +269,10 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                             }
                         }
                     }
-                    IconButton(onClick = {
-                        when {
-                            !audioHere -> c.audio.play(book, chapter, settings.version)
-                            else -> c.audio.toggle()
-                        }
-                    }) { Icon(when { isSpeaking -> Icons.Filled.PauseCircle; audioHere -> Icons.Filled.PlayCircle; else -> Icons.Filled.VolumeUp },
-                        when { isSpeaking -> "Pausar lectura"; audioHere -> "Seguir leyendo"; else -> "Escuchar capítulo" }) }
+                    // El botón de audio solo aparece mientras se escucha; para empezar, menú ⋮ › Escuchar capítulo
+                    if (audioHere) IconButton(onClick = { c.audio.toggle() }) {
+                        Icon(if (isSpeaking) Icons.Filled.PauseCircle else Icons.Filled.PlayCircle, if (isSpeaking) "Pausar lectura" else "Seguir leyendo")
+                    }
                     if (audio != null || sleepAt > 0) Box {
                         IconButton(onClick = { timerMenu = true }) { Icon(if (sleepAt > 0) Icons.Filled.Bedtime else Icons.Filled.Timer, "Opciones de lectura en voz alta") }
                         DropdownMenu(timerMenu, { timerMenu = false }) {
@@ -251,15 +286,37 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                                 onClick = { timerMenu = false; scope.launch { c.settings.update { it.copy(audioContinue = !it.audioContinue) } } })
                         }
                     }
+                    IconButton(onClick = { textMenu = true }) { Icon(Icons.Filled.TextFields, "Texto y pantalla") }
                     IconButton(onClick = { nav.navigate("search") }) { Icon(Icons.Filled.Search, "Buscar") }
-                    IconButton(onClick = { nav.navigate("commentary/$book/$chapter") }) { Icon(Icons.AutoMirrored.Filled.Notes, "Notas de estudio del capítulo") }
+                    Box {
+                        IconButton(onClick = { overflow = true }) { Icon(Icons.Filled.MoreVert, "Más opciones") }
+                        DropdownMenu(overflow, { overflow = false }) {
+                            if (!audioHere) DropdownMenuItem(text = { Text("Escuchar capítulo") }, leadingIcon = { Icon(Icons.Filled.VolumeUp, null) },
+                                onClick = { overflow = false; c.audio.play(book, chapter, settings.version) })
+                            DropdownMenuItem(text = { Text("Notas MacArthur del capítulo") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Notes, null) },
+                                onClick = { overflow = false; nav.navigate("commentary/$book/$chapter") })
+                            DropdownMenuItem(text = { Text("Introducción a ${bk.name}") }, leadingIcon = { Icon(Icons.Filled.Info, null) },
+                                onClick = { overflow = false; nav.navigate("intro/$book") })
+                            DropdownMenuItem(text = { Text(if (readSet.contains(book * 1000 + chapter)) "Capítulo leído ✓" else "Marcar capítulo como leído") }, leadingIcon = { Icon(Icons.Filled.Done, null) },
+                                onClick = { overflow = false; scope.launch { if (c.user.markChapterRead(book, chapter, true)) Toast.makeText(ctx, "+10 puntos", Toast.LENGTH_SHORT).show() } })
+                        }
+                    }
                 }
             )
+            // Tras seguir una referencia: volver al capítulo de donde se vino
+            if (fromLabel.isNotBlank()) AssistChip(onClick = { nav.popBackStack() }, label = { Text("Volver a $fromLabel") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp)) }, modifier = Modifier.padding(start = 12.dp, bottom = 4.dp))
+          }
+          }
         },
         bottomBar = {
             if (selection.isNotEmpty()) SelectionBar(
                 count = selection.size,
-                onColor = { color -> scope.launch { selection.forEach { k -> c.user.setHighlight(k.book, k.chapter, k.verse, color) }; selection = emptySet() } },
+                onColor = { color -> scope.launch {
+                    val before = if (color == null) selection.mapNotNull { k -> c.user.dao.highlightAt(k.book, k.chapter, k.verse) } else emptyList()
+                    selection.forEach { k -> c.user.setHighlight(k.book, k.chapter, k.verse, color) }; selection = emptySet()
+                    if (before.isNotEmpty()) com.biblia.estudio.ui.components.Undo.offer(if (before.size == 1) "Resaltado quitado" else "${before.size} resaltados quitados") { before.forEach { h -> c.user.setHighlight(h.book, h.chapter, h.verse, h.color) } }
+                } },
                 onAction = { a ->
                     val ref = PassageRef(selBook, selChapter, selVerses.first(), selChapter, selVerses.last())
                     when (a) {
@@ -289,7 +346,11 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                         }
                         "bookmark" -> scope.launch {
                             val v = selVerses.first()
-                            if (key(selBook, selChapter, v) in bmSet) c.user.dao.deleteBookmark(selBook, selChapter, v)
+                            if (key(selBook, selChapter, v) in bmSet) {
+                                val old = c.user.dao.bookmarkAt(selBook, selChapter, v)
+                                c.user.dao.deleteBookmark(selBook, selChapter, v)
+                                if (old != null) com.biblia.estudio.ui.components.Undo.offer("Marcador quitado") { c.user.dao.addBookmark(old) }
+                            }
                             else c.user.dao.addBookmark(com.biblia.estudio.data.user.Bookmark(book = selBook, chapter = selChapter, verse = v))
                             selection = emptySet()
                         }
@@ -301,7 +362,23 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
     ) { pad ->
         if (blocks.isEmpty()) { Box(Modifier.padding(pad).fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }; return@Scaffold }
         var dragX by remember { mutableFloatStateOf(0f) }
-        LazyColumn(state = listState, modifier = Modifier.padding(pad).fillMaxSize().pointerInput(continuous, book, chapter) {
+        LazyColumn(state = listState, modifier = Modifier.padding(pad).fillMaxSize().pointerInput(Unit) {
+                // Pellizcar con dos dedos: cambia el tamaño de letra (sin interferir con el desplazamiento de un dedo)
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    var scale = 1f
+                    val base = settingsNow.fontSize
+                    do {
+                        val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        if (ev.changes.count { it.pressed } >= 2) {
+                            scale *= ev.calculateZoom()
+                            pinchSize = (base * scale).coerceIn(13f, 34f)
+                            ev.changes.forEach { it.consume() }
+                        }
+                    } while (ev.changes.any { it.pressed })
+                    pinchSize?.let { f -> scope.launch { c.settings.update { it.copy(fontSize = Math.round(f).toFloat()) }; pinchSize = null } }
+                }
+            }.pointerInput(continuous, book, chapter) {
                 if (!continuous) detectHorizontalDragGestures(
                     onDragStart = { dragX = 0f },
                     onDragEnd = { if (dragX < -180f) next() else if (dragX > 180f) prev(); dragX = 0f },
@@ -337,7 +414,7 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                         val blk = blocks.firstOrNull { b -> b.book == it.book && b.chapter == it.chapter }
                         val vk = VKey(it.book, it.chapter, it.v.verse)
                         VerseRow(
-                            v = it.v, settings = settings, parallel = blk?.parallel?.get(it.v.verse),
+                            v = it.v, settings = settings, parallel = blk?.parallel?.get(it.v.verse), fontSize = fontNow,
                             highlight = hl[k], words = wordMap[k].orEmpty(), selected = vk in selection,
                             speaking = isSpeaking && it.book == book && it.chapter == chapter && speakingIdx - 1 == (speakBlock?.verses?.indexOf(it.v) ?: -2),
                             targeted = target?.let { t -> t.first.book == it.book && t.first.chapter == it.chapter && it.v.verse in t.first.verse..t.second } == true,
@@ -399,7 +476,8 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                 onDictionary = { w -> sheet = null; selection = emptySet(); nav.navigate("dictionary?q=${android.net.Uri.encode(w)}") })
         }
     }
-    previewRef?.let { r -> RefPreviewDialog(r, onDismiss = { previewRef = null }, onOpen = { sheet = null; nav.openRef(it) }) }
+    if (textMenu) TextSettingsSheet(settings, onDismiss = { textMenu = false })
+    previewRef?.let { r -> RefPreviewDialog(r, onDismiss = { previewRef = null }, onOpen = { sheet = null; selection = emptySet(); nav.openRefFromReader(it, "${bk.name} $chapter") }) }
 }
 
 /** Nombre para la cuadrícula de libros: los muy largos se abrevian para que no se corten («1 Tesalonicenses» → «1 Tesal.»). */
@@ -412,24 +490,27 @@ fun splitWords(text: String): List<String> = text.split(Regex("\\s+")).filter { 
 private fun VerseRow(
     v: Verse, settings: AppSettings, parallel: String?, highlight: Int?, words: List<com.biblia.estudio.data.user.WordHighlight>,
     selected: Boolean, targeted: Boolean, speaking: Boolean,
-    hasStudyNote: Boolean, noteCount: Int, bookmarked: Boolean, tagged: Boolean, onClick: () -> Unit, onStudyNote: () -> Unit
+    hasStudyNote: Boolean, noteCount: Int, bookmarked: Boolean, tagged: Boolean, onClick: () -> Unit, onStudyNote: () -> Unit,
+    fontSize: Float = settings.fontSize,
 ) {
-    val primary = MaterialTheme.colorScheme.primary
+    val onDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    // En modo oscuro el resaltado se pinta más opaco y el texto en tinta oscura, para que se lea bien
+    val inkOnHighlight = highlight != null && onDark && !speaking
+    val primary = if (inkOnHighlight) Color(0xFF5A3410) else MaterialTheme.colorScheme.primary
     val bg = when {
         speaking -> MaterialTheme.colorScheme.tertiaryContainer
-        highlight != null -> Color(highlight).copy(alpha = 0.45f)
+        highlight != null -> Color(highlight).copy(alpha = if (onDark) 0.82f else 0.45f)
         targeted -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         else -> Color.Transparent
     }
-    val style = verseTextStyle(settings.fontSize, settings.lineHeight, settings.readerFont)
-    val onDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val style = verseTextStyle(fontSize, settings.lineHeight, settings.readerFont).let { if (inkOnHighlight) it.copy(color = Color(0xFF1E140C)) else it }
     Column(
         Modifier.fillMaxWidth().padding(top = if (v.para) 6.dp else 0.dp).clip(RoundedCornerShape(6.dp)).background(bg)
             .then(if (selected) Modifier.border(2.dp, primary, RoundedCornerShape(6.dp)) else Modifier)
-            .clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 2.dp)
+            .clickable(onClickLabel = if (selected) "Quitar de la selección" else "Seleccionar versículo", onClick = onClick).padding(horizontal = 4.dp, vertical = 2.dp)
     ) {
         Text(buildAnnotatedString {
-            if (settings.showVerseNumbers) withStyle(SpanStyle(color = primary, fontWeight = FontWeight.Bold, fontSize = (settings.fontSize * 0.65f).sp, baselineShift = BaselineShift(0.3f))) { append(v.label + " ") }
+            if (settings.showVerseNumbers) withStyle(SpanStyle(color = primary, fontWeight = FontWeight.Bold, fontSize = (fontSize * 0.65f).sp, baselineShift = BaselineShift(0.3f))) { append(v.label + " ") }
             if (words.isEmpty()) append(v.text)
             else splitWords(v.text).forEachIndexed { i, w ->
                 if (i > 0) append(" ")
@@ -440,11 +521,11 @@ private fun VerseRow(
             if (noteCount > 0) withStyle(SpanStyle(color = primary)) { append(if (noteCount > 1) "  ✎$noteCount" else "  ✎") }
             if (tagged) withStyle(SpanStyle(color = primary)) { append("  #") }
         }, style = style)
-        if (parallel != null) Text(parallel, style = style.copy(fontSize = (settings.fontSize * 0.88f).sp), color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (parallel != null) Text(parallel, style = style.copy(fontSize = (fontSize * 0.88f).sp), color = if (inkOnHighlight) Color(0xFF3B2F25) else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 10.dp, top = 2.dp, bottom = 4.dp))
         // Indicador discreto de nota MacArthur (a la derecha, sin ocupar una línea llamativa)
         if (hasStudyNote) Text("nota MacArthur ›", style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f),
+            color = if (inkOnHighlight) Color(0xFF5A3410) else MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f),
             modifier = Modifier.align(Alignment.End).clip(RoundedCornerShape(4.dp)).clickable(onClick = onStudyNote).padding(horizontal = 4.dp))
     }
 }
@@ -476,7 +557,8 @@ private fun WordHighlightDialog(version: String, v: Verse, existing: List<com.bi
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HighlightColors.forEach { col ->
-                        Box(Modifier.padding(3.dp).size(30.dp).clip(CircleShape).background(Color(col)).clickable(enabled = picked.isNotEmpty()) {
+                        Box(Modifier.padding(3.dp).size(30.dp).clip(CircleShape).background(Color(col))
+                            .semantics { contentDescription = "Marcar en " + HighlightNames[HighlightColors.indexOf(col)] }.clickable(enabled = picked.isNotEmpty()) {
                             colors = colors + picked.associateWith { col }; picked = emptySet()
                         })
                     }
@@ -509,33 +591,50 @@ private fun WordHighlightDialog(version: String, v: Verse, existing: List<com.bi
 
 @Composable
 private fun SelectionBar(count: Int, onColor: (Int?) -> Unit, onAction: (String) -> Unit) {
+    var more by remember { mutableStateOf(false) }
     Surface(tonalElevation = 6.dp, shadowElevation = 6.dp) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(8.dp)) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("$count seleccionado${if (count > 1) "s" else ""}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                HighlightColors.forEach { col ->
-                    Box(Modifier.padding(3.dp).size(28.dp).clip(CircleShape).background(Color(col)).clickable { onColor(col) })
+                Text("$count", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp, end = 4.dp))
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    HighlightColors.forEachIndexed { i, col ->
+                        Box(Modifier.size(30.dp).clip(CircleShape).background(Color(col)).semantics { contentDescription = "Resaltar en " + HighlightNames[i] }.clickable { onColor(col) })
+                    }
                 }
                 IconButton(onClick = { onColor(null) }) { Icon(Icons.Filled.FormatColorReset, "Quitar resaltado") }
+                IconButton(onClick = { onAction("clear") }) { Icon(Icons.Filled.Close, "Cerrar selección") }
             }
-            Row(Modifier.horizontalScroll(rememberScrollState())) {
+            // Las acciones más usadas, a la vista; el resto en «Más»
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 @Composable fun A(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, key: String) =
-                    TextButton(onClick = { onAction(key) }) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(icon, null); Text(label, style = MaterialTheme.typography.labelSmall) } }
-                A(Icons.AutoMirrored.Filled.MenuBook, "MacArthur", "notes")
+                    TextButton(onClick = { onAction(key) }, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(icon, null); Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                    }
                 A(Icons.Filled.EditNote, "Nota", "note")
-                A(Icons.Filled.FormatColorText, "Palabras", "words")
+                A(Icons.AutoMirrored.Filled.MenuBook, "MacArthur", "notes")
                 A(Icons.Filled.FolderSpecial, "Tema", "topic")
-                A(Icons.AutoMirrored.Filled.Label, "Etiqueta", "tag")
-                A(Icons.Filled.CompareArrows, "Comparar", "compare")
-                A(Icons.Filled.School, "Estudiar", "study")
-                A(Icons.Filled.Psychology, "Memorizar", "memory")
-                A(Icons.Filled.Image, "Imagen", "image")
-                A(Icons.Filled.CoPresent, "Púlpito", "pulpit")
-                A(Icons.Filled.VolunteerActivism, "Orar", "journal")
-                A(Icons.Filled.Bookmark, "Marcador", "bookmark")
                 A(Icons.Filled.ContentCopy, "Copiar", "copy")
                 A(Icons.Filled.Share, "Compartir", "share")
-                A(Icons.Filled.Close, "Cerrar", "clear")
+                Box {
+                    TextButton(onClick = { more = true }, contentPadding = PaddingValues(horizontal = 6.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Icon(Icons.Filled.MoreHoriz, null); Text("Más", style = MaterialTheme.typography.labelSmall) }
+                    }
+                    DropdownMenu(more, { more = false }) {
+                        @Composable fun M(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, key: String) =
+                            DropdownMenuItem(text = { Text(label) }, leadingIcon = { Icon(icon, null) }, onClick = { more = false; onAction(key) })
+                        M(Icons.Filled.Bookmark, "Marcador", "bookmark")
+                        M(Icons.AutoMirrored.Filled.Label, "Etiqueta", "tag")
+                        M(Icons.Filled.FormatColorText, "Resaltar palabras", "words")
+                        M(Icons.Filled.CompareArrows, "Comparar versiones", "compare")
+                        HorizontalDivider()
+                        M(Icons.Filled.Psychology, "Memorizar", "memory")
+                        M(Icons.Filled.VolunteerActivism, "Orar por esto", "journal")
+                        M(Icons.Filled.School, "Estudiar el pasaje", "study")
+                        HorizontalDivider()
+                        M(Icons.Filled.Image, "Imagen para compartir", "image")
+                        M(Icons.Filled.CoPresent, "Modo púlpito", "pulpit")
+                    }
+                }
             }
         }
     }
@@ -653,7 +752,7 @@ private fun NoteDialog(book: Int, chapter: Int, verse: Int, existing: List<Verse
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(fmt.format(java.util.Date(n.updated)), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.weight(1f))
                                 IconButton(onClick = { editing = n }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Edit, "Editar", Modifier.size(18.dp)) }
-                                IconButton(onClick = { scope.launch { c.user.dao.deleteNote(n); if (editing?.id == n.id) editing = null } }, modifier = Modifier.size(32.dp)) {
+                                IconButton(onClick = { scope.launch { c.user.dao.deleteNote(n); if (editing?.id == n.id) editing = null; com.biblia.estudio.ui.components.Undo.offer("Nota eliminada") { c.user.dao.upsertNote(n) } } }, modifier = Modifier.size(32.dp)) {
                                     Icon(Icons.Filled.Delete, "Eliminar", Modifier.size(18.dp))
                                 }
                             }
@@ -759,4 +858,46 @@ private fun TagPickerDialog(book: Int, chapter: Int, verses: List<Int>, onDismis
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
+}
+
+/** «Aa»: tamaño de letra, interlineado, tipo de letra, tema y opciones de pantalla, sin salir del lector. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun TextSettingsSheet(s: AppSettings, onDismiss: () -> Unit) {
+    val c = LocalContext.current.app; val scope = rememberCoroutineScope()
+    fun set(f: (AppSettings) -> AppSettings) { scope.launch { c.settings.update(f) } }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text("Texto y pantalla", style = MaterialTheme.typography.titleMedium)
+            Text("Consejo: también puedes pellizcar el texto con dos dedos para agrandarlo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Tamaño", Modifier.width(96.dp))
+                FilledTonalIconButton(onClick = { set { it.copy(fontSize = (it.fontSize - 1).coerceAtLeast(13f)) } }) { Text("A−") }
+                Text("${s.fontSize.toInt()}", Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
+                FilledTonalIconButton(onClick = { set { it.copy(fontSize = (it.fontSize + 1).coerceAtMost(34f)) } }) { Text("A+") }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Interlineado", Modifier.width(96.dp))
+                FilledTonalIconButton(onClick = { set { it.copy(lineHeight = ((it.lineHeight - 0.1f) * 10).roundToInt().div(10f).coerceAtLeast(1.2f)) } }) { Text("−") }
+                Text("%.1f".format(s.lineHeight), Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
+                FilledTonalIconButton(onClick = { set { it.copy(lineHeight = ((it.lineHeight + 0.1f) * 10).roundToInt().div(10f).coerceAtMost(2.2f)) } }) { Text("+") }
+            }
+            Text("Letra", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.biblia.estudio.data.prefs.ReaderFont.entries.forEach { f -> FilterChip(s.readerFont == f, { set { it.copy(readerFont = f) } }, { Text(f.label) }) }
+            }
+            Text("Tema", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.biblia.estudio.data.prefs.ThemeMode.entries.forEach { m -> FilterChip(s.theme == m, { set { it.copy(theme = m) } }, { Text(m.label) }) }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            ListItem(headlineContent = { Text("Pantalla siempre encendida al leer") }, trailingContent = { Switch(s.keepScreenOn, { v -> set { it.copy(keepScreenOn = v) } }) },
+                modifier = Modifier.clickable { set { it.copy(keepScreenOn = !it.keepScreenOn) } })
+            ListItem(headlineContent = { Text("Ocultar barras al leer") }, supportingContent = { Text("Desliza hacia arriba para verlas de nuevo") },
+                trailingContent = { Switch(s.immersiveReader, { v -> set { it.copy(immersiveReader = v) } }) },
+                modifier = Modifier.clickable { set { it.copy(immersiveReader = !it.immersiveReader) } })
+            ListItem(headlineContent = { Text("Números de versículo") }, trailingContent = { Switch(s.showVerseNumbers, { v -> set { it.copy(showVerseNumbers = v) } }) },
+                modifier = Modifier.clickable { set { it.copy(showVerseNumbers = !it.showVerseNumbers) } })
+        }
+    }
 }

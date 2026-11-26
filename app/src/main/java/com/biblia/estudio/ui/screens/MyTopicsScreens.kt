@@ -37,6 +37,8 @@ import com.biblia.estudio.ui.theme.HighlightColors
 import com.biblia.estudio.ui.theme.HighlightNames
 import com.biblia.estudio.ui.theme.Serif
 import com.biblia.estudio.ui.theme.TopicColors
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import kotlinx.coroutines.launch
 
 /** Elemento de lista que muestra una referencia y el texto del versículo en la versión actual. */
@@ -126,7 +128,10 @@ fun MyTopicsScreen(nav: NavController, settings: AppSettings) {
                         items(bookmarks) { b ->
                             val ref = PassageRef(b.book, b.chapter, b.verse)
                             VerseItem(ref, settings.version, null, null, { nav.openRef(ref) }) {
-                                IconButton(onClick = { scope.launch { c.user.dao.deleteBookmark(b.book, b.chapter, b.verse) } }) { Icon(Icons.Filled.Delete, "Quitar") }
+                                IconButton(onClick = { scope.launch {
+                                    c.user.dao.deleteBookmark(b.book, b.chapter, b.verse)
+                                    com.biblia.estudio.ui.components.Undo.offer("Marcador quitado: ${c.content.label(ref)}") { c.user.dao.addBookmark(b) }
+                                } }) { Icon(Icons.Filled.Delete, "Quitar marcador") }
                             }
                         }
                     }
@@ -158,7 +163,8 @@ fun TopicEditDialog(t: UserTopic, onDismiss: () -> Unit) {
                 OutlinedTextField(desc, { desc = it }, label = { Text("Descripción (opcional)") }, modifier = Modifier.padding(top = 8.dp))
                 FlowRow(Modifier.padding(top = 12.dp)) {
                     TopicColors.forEach { col ->
-                        Box(Modifier.padding(4.dp).size(if (col == color) 34.dp else 28.dp).clip(CircleShape).background(Color(col)).clickable { color = col })
+                        Box(Modifier.padding(4.dp).size(if (col == color) 34.dp else 28.dp).clip(CircleShape).background(Color(col))
+                            .semantics { contentDescription = "Color ${TopicColors.indexOf(col) + 1}" + if (col == color) ", elegido" else "" }.clickable { color = col })
                     }
                 }
             }
@@ -266,7 +272,10 @@ fun TopicDetailScreen(nav: NavController, settings: AppSettings, id: Long) {
                         })
                     Box(Modifier.weight(1f)) {
                         VerseItem(ref, settings.version, v.note, null, { nav.openRef(ref) }) {
-                            IconButton(onClick = { scope.launch { c.user.dao.removeTopicVerse(id, v.book, v.chapter, v.verse) } }) { Icon(Icons.Filled.RemoveCircleOutline, "Quitar") }
+                            IconButton(onClick = { scope.launch {
+                                c.user.dao.removeTopicVerse(id, v.book, v.chapter, v.verse)
+                                com.biblia.estudio.ui.components.Undo.offer("Quitado del tema: ${c.content.label(ref)}") { c.user.dao.addTopicVerse(v) }
+                            } }) { Icon(Icons.Filled.RemoveCircleOutline, "Quitar del tema") }
                         }
                     }
                 }
@@ -286,14 +295,21 @@ fun TagDetailScreen(nav: NavController, settings: AppSettings, id: Long) {
     val verses by c.user.dao.tagVerses(id).collectAsState(initial = emptyList())
     Scaffold(topBar = {
         BackTopBar("#" + (tag?.name ?: ""), { nav.popBackStack() }) {
-            IconButton(onClick = { scope.launch { c.user.deleteTag(id); nav.popBackStack() } }) { Icon(Icons.Filled.Delete, "Eliminar etiqueta") }
+            IconButton(onClick = { scope.launch {
+                val name = tag?.name ?: ""
+                val restore = c.user.deleteTagWithUndo(id); nav.popBackStack()
+                com.biblia.estudio.ui.components.Undo.offer("Etiqueta #$name eliminada") { restore() }
+            } }) { Icon(Icons.Filled.Delete, "Eliminar etiqueta") }
         }
     }) { pad ->
         LazyColumn(Modifier.padding(pad)) {
             items(verses) { v ->
                 val ref = PassageRef(v.book, v.chapter, v.verse)
                 VerseItem(ref, settings.version, null, null, { nav.openRef(ref) }) {
-                    IconButton(onClick = { scope.launch { c.user.dao.removeTagVerse(id, v.book, v.chapter, v.verse) } }) { Icon(Icons.Filled.RemoveCircleOutline, "Quitar") }
+                    IconButton(onClick = { scope.launch {
+                        c.user.dao.removeTagVerse(id, v.book, v.chapter, v.verse)
+                        com.biblia.estudio.ui.components.Undo.offer("Quitado de #${tag?.name ?: ""}: ${c.content.label(ref)}") { c.user.dao.addTagVerse(v) }
+                    } }) { Icon(Icons.Filled.RemoveCircleOutline, "Quitar de la etiqueta") }
                 }
             }
         }
