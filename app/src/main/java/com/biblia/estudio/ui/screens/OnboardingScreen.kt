@@ -37,7 +37,8 @@ fun OnboardingScreen(s: AppSettings) {
     Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp)) {
         Text("Bienvenido a", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         Text("Códice vivo", style = MaterialTheme.typography.displaySmall)
-        Text("Tu Biblia de estudio, 100 % en tu teléfono: sin Internet, sin cuentas, tus notas solo para ti.", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
+        Text("por Danruz", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline)
+        Text("Tu Biblia de estudio, 100 % en tu teléfono: sin cuentas, tus notas solo para ti.", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
 
         Text("¿Qué versión lees normalmente?", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 24.dp, bottom = 6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

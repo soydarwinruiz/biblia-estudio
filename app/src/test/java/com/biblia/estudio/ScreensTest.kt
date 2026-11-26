@@ -85,7 +85,7 @@ class ScreensTest {
         shot("07_hermeneutica")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
-        rule.onNodeWithText("Mis temas").performClick()
+        rule.onNodeWithText("Temas").performClick()
         waitText("Temas")
         shot("08_mis_temas")
 
@@ -249,7 +249,7 @@ class ScreensTest {
         waitText("En el principio era el Verbo", true)
         rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
         rule.onNode(hasText("Púlpito")).performScrollTo().performClick()
-        waitText("Velocidad de desplazamiento")
+        waitText("Velocidad de desplazamiento", true)
         shot("24_pulpito")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
@@ -266,7 +266,7 @@ class ScreensTest {
         rule.onNode(hasSetTextAction()).performImeAction()
         rule.onNodeWithText("Frase exacta").performClick()
         val t0 = System.currentTimeMillis()
-        waitText("1 resultado")
+        rule.waitUntil(180_000) { rule.onAllNodesWithText("1 resultado").fetchSemanticsNodes().isNotEmpty() }
         println("TIEMPO_FRASE=" + (System.currentTimeMillis() - t0))
         shot("26_busqueda_frase")
         rule.onNodeWithText("Mis notas y diario").performClick()
@@ -277,10 +277,38 @@ class ScreensTest {
         shot("27_busqueda_diario")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
+        // Diario como sección: Agenda con una actividad nueva
+        rule.onNodeWithText("Diario").performClick()
+        waitText("Agenda vacía")
+        rule.onNodeWithText("Nueva actividad", useUnmergedTree = true).performClick()
+        waitText("Tipo de actividad")
+        rule.onNodeWithText("🍞 Ayuno").performClick()
+        rule.onNode(hasSetTextAction() and hasText("Nombre de la actividad")).performTextInput("Ayuno congregacional")
+        rule.onNode(hasSetTextAction() and hasText("Lugar")).performTextInput("Templo central")
+        shot("30_actividad_nueva")
+        rule.onNodeWithText("Guardar").performClick()
+        waitText("Ayuno congregacional")
+        shot("31_agenda")
+        kotlinx.coroutines.runBlocking {
+            val ev = rule.activity.app.user.dao.dumpJournal().first { it.kind == "event" }
+            org.junit.Assert.assertEquals("Ayuno", ev.eventType)
+            org.junit.Assert.assertEquals("Templo central", ev.place)
+            org.junit.Assert.assertEquals(60, ev.reminderMinutes)
+            // El aviso queda programado una hora antes
+            val am = rule.activity.getSystemService(android.app.AlarmManager::class.java)
+            val next = org.robolectric.Shadows.shadowOf(am).scheduledAlarms.map { it.triggerAtTime }
+            org.junit.Assert.assertTrue("aviso programado: $next", next.any { it == ev.eventAt - 3_600_000L })
+        }
+        // La actividad aparece en «Hoy»
+        rule.onAllNodesWithText("Hoy").filter(hasClickAction()).onFirst().performClick()
+        waitText("Próximas actividades")
+        shot("32_hoy_actividades")
+
         // Ajustes nuevos
-        rule.onNodeWithText("Hoy").performClick()
         rule.onNodeWithContentDescription("Ajustes").performClick()
         waitText("Apariencia")
+        rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Creada por Danruz", substring = true))
+        shot("33_acerca_de")
         rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Lectura en voz alta"))
         shot("28_ajustes_voz")
         rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Respaldo automático"))

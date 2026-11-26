@@ -43,7 +43,9 @@ data class UserTopic(
 data class TopicVerse(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val topicId: Long, val book: Int, val chapter: Int, val verse: Int, val verseEnd: Int = verse,
-    val note: String = "", val created: Long = System.currentTimeMillis()
+    val note: String = "", val created: Long = System.currentTimeMillis(),
+    /** Orden elegido por el usuario dentro del tema (v5). 0 = sin orden: se usa la fecha en que se añadió. */
+    @ColumnInfo(defaultValue = "0") val position: Int = 0,
 )
 
 @Serializable
@@ -133,7 +135,8 @@ data class WordHighlight(
 
 /**
  * Diario espiritual (v4): peticiones de oración (kind = "prayer") con seguimiento de respuesta,
- * y entradas de diario (kind = "journal"), opcionalmente ligadas a un versículo.
+ * entradas de diario (kind = "journal"), opcionalmente ligadas a un versículo,
+ * y actividades de la iglesia en la agenda (kind = "event", v5).
  */
 @Serializable
 @Entity(tableName = "journal", indices = [Index("kind")])
@@ -146,5 +149,10 @@ data class JournalEntry(
     val answered: Boolean = false,
     val answeredAt: Long = 0,
     val answerNote: String = "",
-    val created: Long = System.currentTimeMillis(), val updated: Long = System.currentTimeMillis()
+    val created: Long = System.currentTimeMillis(), val updated: Long = System.currentTimeMillis(),
+    // Agenda (v5, kind = "event"): tipo de actividad, fecha y hora (millis), lugar y aviso previo en minutos (-1 = sin aviso).
+    @ColumnInfo(defaultValue = "''") val eventType: String = "",
+    @ColumnInfo(defaultValue = "0") val eventAt: Long = 0,
+    @ColumnInfo(defaultValue = "''") val place: String = "",
+    @ColumnInfo(defaultValue = "-1") val reminderMinutes: Int = -1,
 )

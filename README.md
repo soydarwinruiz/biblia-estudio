@@ -1,7 +1,10 @@
-# Códice vivo — Biblia de estudio (Android, 100% local)
+# Códice vivo — Biblia de estudio (Android)
 
-Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Internet**: todo el contenido
-(Biblias, notas de estudio, contenido diario) viaja dentro del APK y tus datos personales se guardan solo en el teléfono.
+**Autor: Danruz**
+
+Aplicación Android en Kotlin + Jetpack Compose. Todo el contenido (Biblias, notas de estudio, contenido diario)
+viaja dentro del APK y tus datos personales se guardan solo en el teléfono. Internet se usa únicamente, si lo permites,
+para comprobar una vez al día si hay una versión nueva (lee un archivo público; no envía datos).
 
 ## Contenido incluido
 | Contenido | Cantidad | Fuente |
@@ -39,6 +42,23 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, colores del sistema (Material You), letra serif o sans, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
+### Novedades de la 1.6
+- **Diario** como sección propia en la barra inferior, con **Agenda** de la iglesia: cultos, ayunos, vigilias, devocionales,
+  campañas, estudios, reuniones… con nombre, día, hora, lugar, notas y **aviso** (a la hora, 15 min, 1 h, 3 h o 1 día antes).
+  Las próximas actividades aparecen también en «Hoy». Peticiones de oración y diario siguen en sus pestañas.
+- **Temas**: los versículos quedan en el orden en que los agregas y se pueden **arrastrar** (asa ⠿) para reordenarlos,
+  u ordenar por libro desde el menú.
+- **Aviso de nuevas versiones** (Ajustes › Actualizaciones) y aviso de novedades al instalar una versión nueva.
+- Correcciones: 1 y 2 Tesalonicenses se ven en el selector de libros; en el modo púlpito los controles ya no tapan el título.
+- Mejoras: pestaña Pasaje del estudio más clara (capítulo completo / versículos, texto plegable, notas en tarjetas)
+  y marca de nota MacArthur más discreta en el lector.
+
+### Publicar una versión nueva (para que llegue el aviso)
+1. Sube `versionCode` y `versionName` en `app/build.gradle.kts` y compila el APK.
+2. Súbelo a `apk/` en `main`.
+3. En el repositorio `codice-vivo-web`, actualiza `public/android-version.json` (número, nombre, enlace y notas),
+   ejecuta `npm run build` y sube a `main`. Las apps instaladas lo verán en las siguientes 24 horas.
+
 ### Novedades de la 1.5
 - **Diario**: peticiones de oración con «respondida» (fecha y cómo respondió Dios) y entradas de diario; se puede orar desde un versículo (botón «Orar» del lector).
 - **Respaldo automático** diario o semanal en una carpeta que elijas (se guardan las últimas 7 copias). La copia de Google del teléfono ahora sí incluye tus datos (antes la base de la Biblia, de ~110 MB, superaba el límite de 25 MB y no se respaldaba nada).
@@ -54,9 +74,9 @@ Aplicación Android en Kotlin + Jetpack Compose. **No solicita permiso de Intern
 - Lector más ligero: solo carga tus resaltados y notas de los capítulos visibles.
 
 ## Instalar el APK
-Descarga el APK de la última versión en la sección **Releases** del repositorio, ábrelo en el teléfono y permite instalar apps de fuentes desconocidas.
+Descarga [`apk/codice-vivo-1.6.apk`](apk/codice-vivo-1.6.apk) en el teléfono (botón *Download raw file*), ábrelo y permite instalar apps de fuentes desconocidas.
 Se instala encima de la versión anterior sin perder datos (misma clave de firma).
-Los APK ya no se guardan dentro del repositorio: cada uno pesaba ~55 MB y engordaba el historial de git (la 1.4 sigue en `apk/` por compatibilidad).
+Nota: cada APK pesa ~55 MB y engorda el historial de git; a futuro conviene publicarlos en **Releases** en vez de guardarlos aquí.
 
 ## Firma
 El APK se firma con `keystore/biblia-release.jks`. Las contraseñas **ya no están en el código**: copia
@@ -69,7 +89,7 @@ Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarg
 ```bash
 ./gradlew assembleRelease
 adb install -r app/build/outputs/apk/release/app-release.apk
-./gradlew testDebugUnitTest    # 20 pruebas: contenido, búsqueda, respaldo, migración de la base, SM-2 y pantallas
+./gradlew testDebugUnitTest    # 23 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda, SM-2 y pantallas
 ```
 
 ## Regenerar la base de contenido
