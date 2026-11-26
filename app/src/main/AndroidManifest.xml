@@ -7,6 +7,9 @@
     <!-- Recordatorio puntual a la hora elegida y reprogramarlo tras reiniciar el teléfono -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Lectura en voz alta con la pantalla apagada (controles en la notificación y la pantalla de bloqueo) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <application
         android:name=".BibliaApp"
         android:allowBackup="true"
@@ -53,6 +56,7 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/progress_widget_info" />
         </receiver>
         <receiver android:name=".work.ReminderReceiver" android:exported="false" />
+        <service android:name=".work.AudioService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".work.SystemEventsReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

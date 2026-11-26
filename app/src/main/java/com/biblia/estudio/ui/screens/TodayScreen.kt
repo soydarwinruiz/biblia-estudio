@@ -60,8 +60,8 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
     val posOrNull by c.settings.position.collectAsState(initial = null)
     // Actividades de la agenda en los próximos 7 días (máx. 3)
     val startOfToday = remember { java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
-    val nextEvents by remember { c.user.dao.upcomingEvents(startOfToday, 3) }.collectAsState(initial = emptyList())
-    val upcoming = nextEvents.filter { it.eventAt < startOfToday + 8 * 86_400_000L }
+    val allEvents by remember { c.user.dao.events() }.collectAsState(initial = emptyList())
+    val upcoming = remember(allEvents) { upcomingOccurrences(allEvents, startOfToday, startOfToday + 8 * 86_400_000L).take(3) }
     val pos = posOrNull ?: com.biblia.estudio.data.prefs.ReadingPosition()
     val memoryDue by c.user.dao.dueMemoryCount(realToday).collectAsState(initial = 0)
     val speaking by c.speaker.speaking.collectAsState()
@@ -124,7 +124,7 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
             if (isToday && upcoming.isNotEmpty()) ElevatedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.navigate("journal") }) {
                 Column(Modifier.padding(vertical = 8.dp)) {
                     Text("Próximas actividades", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    upcoming.forEach { e -> EventRow(e) { nav.navigate("journal/${e.id}?kind=event") } }
+                    upcoming.forEach { (e, at) -> EventRow(e, at = at) { nav.navigate("journal/${e.id}?kind=event") } }
                 }
             }
             if (isToday && memoryDue > 0) ElevatedCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.navigate("memory") },

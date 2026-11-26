@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -193,6 +194,29 @@ fun TopicDetailScreen(nav: NavController, settings: AppSettings, id: Long) {
         if (from < 0 || to < 0) return
         order = order.toMutableList().apply { add(to, removeAt(from)) }
         dragOffset += (me.offset - target.offset).toFloat()
+    }
+    // Desplazamiento automático: si el versículo arrastrado llega cerca del borde, la lista se mueve sola.
+    LaunchedEffect(dragId) {
+        val idd = dragId ?: return@LaunchedEffect
+        val edge = 140
+        while (dragId == idd) {
+            val info = listState.layoutInfo
+            val me = info.visibleItemsInfo.firstOrNull { it.key == idd }
+            if (me != null) {
+                val top = me.offset + dragOffset; val bottom = top + me.size
+                val speed = when {
+                    top < info.viewportStartOffset + edge -> -((info.viewportStartOffset + edge - top) / 6f).coerceIn(4f, 40f)
+                    bottom > info.viewportEndOffset - edge -> ((bottom - (info.viewportEndOffset - edge)) / 6f).coerceIn(4f, 40f)
+                    else -> 0f
+                }
+                if (speed != 0f) {
+                    val used = listState.scrollBy(speed)
+                    dragOffset += used   // el elemento se queda bajo el dedo
+                    dragBy(0f)           // y cambia de lugar con sus vecinos si hace falta
+                }
+            }
+            kotlinx.coroutines.delay(16)
+        }
     }
     Scaffold(topBar = {
         BackTopBar(topic?.name ?: "Tema", { nav.popBackStack() }) {

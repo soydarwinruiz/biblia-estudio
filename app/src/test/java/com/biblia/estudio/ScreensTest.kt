@@ -254,6 +254,7 @@ class ScreensTest {
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
         // Imagen para compartir
+        waitText("En el principio era el Verbo", true)
         rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
         rule.onNode(hasText("Imagen")).performScrollTo().performClick()
         waitText("Imagen para compartir")

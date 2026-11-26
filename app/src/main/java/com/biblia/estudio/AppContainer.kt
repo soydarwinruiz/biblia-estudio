@@ -17,6 +17,8 @@ class AppContainer(private val context: Context) {
     val settings = SettingsRepository(context)
     @Volatile var refParser: RefParser? = null
     val speaker by lazy { Speaker(context) }
+    /** Lectura de capítulos en voz alta (sigue con la pantalla apagada). */
+    val audio by lazy { com.biblia.estudio.domain.AudioPlayer(context, content, settings, speaker) }
     /** Última posición de lectura (copia en memoria; se guarda en el almacén «state»). */
     @Volatile var position = ReadingPosition()
 
@@ -25,6 +27,7 @@ class AppContainer(private val context: Context) {
         if (refParser == null) {
             refParser = RefParser(content.abbreviations())
             runCatching { settings.migratePosition() }
+            runCatching { user.seedAwardsIfNeeded() }
             position = settings.currentPosition()
         }
     }

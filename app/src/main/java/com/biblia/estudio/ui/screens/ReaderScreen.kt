@@ -165,27 +165,19 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
         if (idx >= 0) listState.scrollToItem((idx + offset - 1).coerceAtLeast(0))
     }
 
-    // Lectura en voz alta del capítulo visible
-    val speakKey = "cap:$book:$chapter:${settings.version}"
-    val speakingKey by c.speaker.speaking.collectAsState()
+    // Lectura en voz alta: la lleva AudioPlayer (sigue aunque se cierre esta pantalla o se apague la pantalla)
+    val audio by c.audio.state.collectAsState()
     val speakingIdx by c.speaker.current.collectAsState()
-    val isSpeaking = speakingKey == speakKey
+    val audioHere = audio?.let { it.book == book && it.chapter == chapter && it.version == settings.version } == true
+    val isSpeaking = audioHere && audio?.playing == true
     val speakBlock = blocks.firstOrNull { it.book == book && it.chapter == chapter }
-    DisposableEffect(Unit) { onDispose { if (c.speaker.speaking.value?.startsWith("cap:") == true) c.speaker.stop() } }
-    val sleepAt by c.speaker.sleepAt.collectAsState()
+    val sleepAt by c.audio.sleepAt.collectAsState()
     var timerMenu by remember { mutableStateOf(false) }
-    // Audio continuo: al terminar un capítulo se lee el siguiente
-    val currentSettings by rememberUpdatedState(settings)
-    LaunchedEffect(Unit) {
-        c.speaker.finished.collect { key ->
-            val s = currentSettings
-            val parts = key.split(":")
-            if (!s.audioContinue || parts.size < 4 || parts[0] != "cap") return@collect
-            val n = nextOf(parts[1].toInt(), parts[2].toInt()) ?: return@collect
-            val vs = c.content.chapter(s.version, n.first, n.second)
-            startBook = n.first; startChapter = n.second; target = null; selection = emptySet()
-            listState.scrollToItem(0)
-            c.speaker.speak("cap:${n.first}:${n.second}:${s.version}", listOf("${c.content.book(n.first).name}, capítulo ${n.second}.") + vs.map { it.text })
+    // Si el audio pasa al capítulo siguiente, el lector lo acompaña
+    LaunchedEffect(audio?.book, audio?.chapter) {
+        val a = audio ?: return@LaunchedEffect
+        if (a.playing && a.version == settings.version && (a.book != book || a.chapter != chapter) && blocks.none { it.book == a.book && it.chapter == a.chapter }) {
+            startBook = a.book; startChapter = a.chapter; target = null; selection = emptySet(); listState.scrollToItem(0)
         }
     }
     LaunchedEffect(speakingIdx) {
@@ -240,16 +232,21 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                         }
                     }
                     IconButton(onClick = {
-                        val vs = speakBlock?.verses.orEmpty()
-                        c.speaker.toggle(speakKey, listOf("${bk.name}, capítulo $chapter.") + vs.map { it.text })
-                    }) { Icon(if (isSpeaking) Icons.Filled.StopCircle else Icons.Filled.VolumeUp, if (isSpeaking) "Detener lectura" else "Escuchar capítulo") }
-                    if (isSpeaking || sleepAt > 0) Box {
-                        IconButton(onClick = { timerMenu = true }) { Icon(if (sleepAt > 0) Icons.Filled.Bedtime else Icons.Filled.Timer, "Temporizador para dormir") }
+                        when {
+                            !audioHere -> c.audio.play(book, chapter, settings.version)
+                            else -> c.audio.toggle()
+                        }
+                    }) { Icon(when { isSpeaking -> Icons.Filled.PauseCircle; audioHere -> Icons.Filled.PlayCircle; else -> Icons.Filled.VolumeUp },
+                        when { isSpeaking -> "Pausar lectura"; audioHere -> "Seguir leyendo"; else -> "Escuchar capítulo" }) }
+                    if (audio != null || sleepAt > 0) Box {
+                        IconButton(onClick = { timerMenu = true }) { Icon(if (sleepAt > 0) Icons.Filled.Bedtime else Icons.Filled.Timer, "Opciones de lectura en voz alta") }
                         DropdownMenu(timerMenu, { timerMenu = false }) {
+                            DropdownMenuItem(text = { Text("Detener la lectura") }, leadingIcon = { Icon(Icons.Filled.StopCircle, null) }, onClick = { timerMenu = false; c.audio.stop() })
+                            HorizontalDivider()
                             Text(if (sleepAt > 0) "Se detendrá a las " + java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(sleepAt)) else "Detener la lectura en…",
                                 style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 12.dp))
-                            listOf(10, 20, 30, 45, 60).forEach { m -> DropdownMenuItem(text = { Text("$m minutos") }, onClick = { timerMenu = false; c.speaker.sleepIn(m) }) }
-                            if (sleepAt > 0) DropdownMenuItem(text = { Text("Cancelar temporizador") }, onClick = { timerMenu = false; c.speaker.sleepIn(0) })
+                            listOf(10, 20, 30, 45, 60).forEach { m -> DropdownMenuItem(text = { Text("$m minutos") }, onClick = { timerMenu = false; c.audio.sleepIn(m) }) }
+                            if (sleepAt > 0) DropdownMenuItem(text = { Text("Cancelar temporizador") }, onClick = { timerMenu = false; c.audio.sleepIn(0) })
                             DropdownMenuItem(text = { Text(if (settings.audioContinue) "✓ Seguir con el siguiente capítulo" else "Seguir con el siguiente capítulo") },
                                 onClick = { timerMenu = false; scope.launch { c.settings.update { it.copy(audioContinue = !it.audioContinue) } } })
                         }
@@ -345,7 +342,7 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                             speaking = isSpeaking && it.book == book && it.chapter == chapter && speakingIdx - 1 == (speakBlock?.verses?.indexOf(it.v) ?: -2),
                             targeted = target?.let { t -> t.first.book == it.book && t.first.chapter == it.chapter && it.v.verse in t.first.verse..t.second } == true,
                             hasStudyNote = settings.showNoteMarkers && blk != null && it.v.verse in blk.noteVerses,
-                            hasNote = noteMap.containsKey(k), bookmarked = k in bmSet, tagged = k in taggedSet,
+                            noteCount = noteMap[k]?.size ?: 0, bookmarked = k in bmSet, tagged = k in taggedSet,
                             onClick = {
                                 selection = when {
                                     vk in selection -> selection - vk
@@ -361,7 +358,7 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
                         Column(Modifier.padding(top = 16.dp, bottom = if (continuous) 8.dp else 0.dp)) {
                             if (read) OutlinedButton(onClick = { scope.launch { c.user.markChapterRead(it.book, it.chapter, false) } }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Filled.CheckCircle, null); Spacer(Modifier.width(8.dp)); Text(if (continuous) "${c.content.book(it.book).name} ${it.chapter} leído" else "Capítulo leído")
-                            } else Button(onClick = { scope.launch { c.user.markChapterRead(it.book, it.chapter, true); Toast.makeText(ctx, "+10 puntos", Toast.LENGTH_SHORT).show() } }, modifier = Modifier.fillMaxWidth()) {
+                            } else Button(onClick = { scope.launch { if (c.user.markChapterRead(it.book, it.chapter, true)) Toast.makeText(ctx, "+10 puntos", Toast.LENGTH_SHORT).show() } }, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Filled.Done, null); Spacer(Modifier.width(8.dp)); Text(if (continuous) "Marcar ${c.content.book(it.book).name} ${it.chapter} como leído" else "Marcar como leído")
                             }
                             if (!continuous) {
@@ -388,7 +385,7 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
     when (sheet) {
         "notes" -> if (first != null) StudyNotesSheet(selBook, selChapter, first, onDismiss = { sheet = null }, onRef = { previewRef = it },
             onOpenCommentary = { sheet = null; nav.navigate("commentary/$selBook/$selChapter") })
-        "note" -> if (first != null) NoteDialog(selBook, selChapter, first, noteMap[key(selBook, selChapter, first)]?.firstOrNull(), onDismiss = { sheet = null; selection = emptySet() })
+        "note" -> if (first != null) NoteDialog(selBook, selChapter, first, noteMap[key(selBook, selChapter, first)].orEmpty(), onDismiss = { sheet = null; selection = emptySet() })
         "topic" -> if (first != null) TopicPickerDialog(selBook, selChapter, selVerses, onDismiss = { sheet = null; selection = emptySet() })
         "tag" -> if (first != null) TagPickerDialog(selBook, selChapter, selVerses, onDismiss = { sheet = null; selection = emptySet() })
         "image" -> if (first != null) selBlock?.let { blk ->
@@ -415,7 +412,7 @@ fun splitWords(text: String): List<String> = text.split(Regex("\\s+")).filter { 
 private fun VerseRow(
     v: Verse, settings: AppSettings, parallel: String?, highlight: Int?, words: List<com.biblia.estudio.data.user.WordHighlight>,
     selected: Boolean, targeted: Boolean, speaking: Boolean,
-    hasStudyNote: Boolean, hasNote: Boolean, bookmarked: Boolean, tagged: Boolean, onClick: () -> Unit, onStudyNote: () -> Unit
+    hasStudyNote: Boolean, noteCount: Int, bookmarked: Boolean, tagged: Boolean, onClick: () -> Unit, onStudyNote: () -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val bg = when {
@@ -440,7 +437,7 @@ private fun VerseRow(
                 if (wh != null) withStyle(SpanStyle(background = Color(wh.color).copy(alpha = 0.75f), color = if (onDark) Color.Black else Color.Unspecified)) { append(w) } else append(w)
             }
             if (bookmarked) withStyle(SpanStyle(color = primary)) { append("  🔖") }
-            if (hasNote) withStyle(SpanStyle(color = primary)) { append("  ✎") }
+            if (noteCount > 0) withStyle(SpanStyle(color = primary)) { append(if (noteCount > 1) "  ✎$noteCount" else "  ✎") }
             if (tagged) withStyle(SpanStyle(color = primary)) { append("  #") }
         }, style = style)
         if (parallel != null) Text(parallel, style = style.copy(fontSize = (settings.fontSize * 0.88f).sp), color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -626,27 +623,57 @@ fun StudyNotesSheet(book: Int, chapter: Int, verse: Int, onDismiss: () -> Unit, 
     }
 }
 
+/** Notas personales de un versículo: puede haber varias; se editan, borran o añaden. */
 @Composable
-private fun NoteDialog(book: Int, chapter: Int, verse: Int, existing: VerseNote?, onDismiss: () -> Unit) {
+private fun NoteDialog(book: Int, chapter: Int, verse: Int, existing: List<VerseNote>, onDismiss: () -> Unit) {
     val c = LocalContext.current.app; val scope = rememberCoroutineScope()
-    var text by remember { mutableStateOf(existing?.text ?: "") }
+    val notes = remember(existing) { existing.sortedBy { it.created } }
+    // null = escribiendo una nota nueva; si no, la nota que se edita
+    var editing by remember { mutableStateOf<VerseNote?>(if (existing.size == 1) existing.first() else null) }
+    var text by remember(editing) { mutableStateOf(editing?.text ?: "") }
+    val fmt = remember { java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale("es")) }
+    fun save(close: Boolean) = scope.launch {
+        val e = editing
+        when {
+            text.isBlank() && e != null -> c.user.dao.deleteNote(e)
+            text.isBlank() -> {}
+            e != null -> c.user.dao.upsertNote(e.copy(text = text.trim(), updated = System.currentTimeMillis()))
+            else -> c.user.dao.upsertNote(VerseNote(book = book, chapter = chapter, verse = verse, text = text.trim()))
+        }
+        if (close) onDismiss() else { editing = null; text = "" }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nota · ${c.content.book(book).name} $chapter:$verse") },
-        text = { OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().heightIn(min = 160.dp), placeholder = { Text("Escribe tu reflexión, aplicación u observación…") }) },
-        confirmButton = {
-            TextButton(onClick = {
-                scope.launch {
-                    if (text.isBlank()) existing?.let { c.user.dao.deleteNote(it) }
-                    else c.user.dao.upsertNote((existing ?: VerseNote(book = book, chapter = chapter, verse = verse, text = "")).copy(text = text.trim(), updated = System.currentTimeMillis()))
-                    onDismiss()
+        title = { Text("Notas · ${c.content.book(book).name} $chapter:$verse") },
+        text = {
+            Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+                notes.filter { it.id != editing?.id }.forEach { n ->
+                    OutlinedCard(Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable { editing = n }) {
+                        Column(Modifier.padding(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(fmt.format(java.util.Date(n.updated)), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.weight(1f))
+                                IconButton(onClick = { editing = n }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Edit, "Editar", Modifier.size(18.dp)) }
+                                IconButton(onClick = { scope.launch { c.user.dao.deleteNote(n); if (editing?.id == n.id) editing = null } }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Filled.Delete, "Eliminar", Modifier.size(18.dp))
+                                }
+                            }
+                            Text(n.text, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
                 }
-            }) { Text("Guardar") }
+                Text(if (editing != null) "Editando nota" else if (notes.isEmpty()) "Nueva nota" else "Añadir otra nota",
+                    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
+                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().heightIn(min = 120.dp), placeholder = { Text("Escribe tu reflexión, aplicación u observación…") })
+                if (notes.isNotEmpty()) TextButton(onClick = { save(close = false) }, enabled = text.isNotBlank()) {
+                    Icon(Icons.Filled.Add, null); Text(if (editing != null) " Guardar y escribir otra" else " Guardar y añadir otra")
+                }
+            }
         },
+        confirmButton = { TextButton(onClick = { save(close = true) }) { Text("Guardar") } },
         dismissButton = {
             Row {
-                if (existing != null) TextButton(onClick = { scope.launch { c.user.dao.deleteNote(existing); onDismiss() } }) { Text("Eliminar") }
-                TextButton(onClick = onDismiss) { Text("Cancelar") }
+                if (editing != null) TextButton(onClick = { editing = null; text = "" }) { Text("Nueva") }
+                TextButton(onClick = onDismiss) { Text("Cerrar") }
             }
         }
     )

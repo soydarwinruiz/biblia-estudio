@@ -19,14 +19,16 @@ fun today(): Long = LocalDate.now().toEpochDay()
 
 @Serializable
 data class Backup(
-    val app: String = "BibliaEstudio", val version: Int = 2, val created: Long = System.currentTimeMillis(),
+    val app: String = "BibliaEstudio", val version: Int = 3, val created: Long = System.currentTimeMillis(),
     val highlights: List<Highlight>, val notes: List<VerseNote>, val bookmarks: List<Bookmark>,
     val topics: List<UserTopic>, val topicVerses: List<TopicVerse>, val tags: List<Tag>, val tagVerses: List<TagVerse>,
     val chaptersRead: List<ChapterRead>, val enrollments: List<PlanEnrollment>, val planDays: List<PlanDayDone>,
     val activity: List<ActivityDay>, val quizDays: List<QuizDay>, val devotional: List<DevotionalDone>, val studies: List<Study>,
     val reflections: List<LessonReflection> = emptyList(), val memory: List<MemoryVerse> = emptyList(),
     val wordHighlights: List<WordHighlight> = emptyList(),
-    val journal: List<JournalEntry> = emptyList()
+    val journal: List<JournalEntry> = emptyList(),
+    val awards: List<PointAward> = emptyList(),
+    val quizSeen: List<QuizSeen> = emptyList()
 )
 
 class UserRepository(private val db: UserDatabase) {
@@ -46,9 +48,26 @@ class UserRepository(private val db: UserDatabase) {
         }
     }
 
-    suspend fun markChapterRead(book: Int, chapter: Int, read: Boolean) {
-        if (read) { if (dao.markRead(ChapterRead(book, chapter)) != -1L) addPoints(Points.CHAPTER) }
-        else dao.unmarkRead(book, chapter)
+    /** Una sola vez tras actualizar a la 1.7: lo ya marcado cuenta como premiado. */
+    suspend fun seedAwardsIfNeeded() {
+        if (dao.awardCount() > 0) return
+        val enr = dao.dumpEnrollments().associate { it.planId to it.startDay }
+        val keys = dao.dumpChaptersRead().map { "ch:${it.book}:${it.chapter}" } +
+            dao.dumpPlanDays().mapNotNull { d -> enr[d.planId]?.let { "plan:${d.planId}:$it:${d.day}" } }
+        if (keys.isNotEmpty()) dao.insAwards(keys.map { PointAward(it) })
+    }
+
+    /** Otorga puntos solo la primera vez para esa clave. Devuelve true si los dio. */
+    private suspend fun award(key: String, points: Int): Boolean {
+        if (dao.insertAward(PointAward(key)) == -1L) return false
+        addPoints(points); return true
+    }
+
+    /** Marca o desmarca un capítulo. Devuelve true si se ganaron puntos (solo la primera vez que se lee). */
+    suspend fun markChapterRead(book: Int, chapter: Int, read: Boolean): Boolean {
+        if (!read) { dao.unmarkRead(book, chapter); return false }
+        if (dao.markRead(ChapterRead(book, chapter)) == -1L) return false
+        return award("ch:$book:$chapter", Points.CHAPTER)
     }
 
     suspend fun markDevotional(type: String) {
@@ -63,9 +82,12 @@ class UserRepository(private val db: UserDatabase) {
 
     suspend fun practicePoints(correct: Int) = addPoints(correct * 2)
 
-    suspend fun markPlanDay(planId: Int, day: Int, done: Boolean) {
-        if (done) { if (dao.markPlanDay(PlanDayDone(planId, day)) != -1L) addPoints(Points.PLAN_DAY) }
-        else dao.unmarkPlanDay(planId, day)
+    /** Marca un día del plan. Los puntos se dan una vez por día y por cada vez que se empieza el plan. */
+    suspend fun markPlanDay(planId: Int, day: Int, done: Boolean): Boolean {
+        if (!done) { dao.unmarkPlanDay(planId, day); return false }
+        if (dao.markPlanDay(PlanDayDone(planId, day)) == -1L) return false
+        val start = dao.enrollment(planId)?.startDay ?: today()
+        return award("plan:$planId:$start:$day", Points.PLAN_DAY)
     }
 
     suspend fun enroll(planId: Int) = dao.upsertEnrollment(PlanEnrollment(planId, today(), true))
@@ -127,7 +149,7 @@ class UserRepository(private val db: UserDatabase) {
         chaptersRead = dao.dumpChaptersRead(), enrollments = dao.dumpEnrollments(), planDays = dao.dumpPlanDays(),
         activity = dao.dumpActivity(), quizDays = dao.dumpQuizDays(), devotional = dao.dumpDevotional(), studies = dao.dumpStudies(),
         reflections = dao.dumpReflections(), memory = dao.dumpMemory(), wordHighlights = dao.dumpWordHighlights(),
-        journal = dao.dumpJournal()
+        journal = dao.dumpJournal(), awards = dao.dumpAwards(), quizSeen = dao.dumpQuizSeen()
     ))
 
     /** Restaura un respaldo reemplazando todos los datos personales. */
@@ -139,7 +161,7 @@ class UserRepository(private val db: UserDatabase) {
             dao.insTopics(b.topics); dao.insTopicVerses(b.topicVerses); dao.insTags(b.tags); dao.insTagVerses(b.tagVerses)
             dao.insChaptersRead(b.chaptersRead); dao.insEnrollments(b.enrollments); dao.insPlanDays(b.planDays)
             dao.insActivity(b.activity); dao.insQuizDays(b.quizDays); dao.insDevotional(b.devotional); dao.insStudies(b.studies)
-            dao.insReflections(b.reflections); dao.insMemory(b.memory); dao.insWordHighlights(b.wordHighlights); dao.insJournal(b.journal)
+            dao.insReflections(b.reflections); dao.insMemory(b.memory); dao.insWordHighlights(b.wordHighlights); dao.insJournal(b.journal); dao.insAwards(b.awards); dao.insQuizSeen(b.quizSeen)
         }
         return b.highlights.size + b.notes.size + b.topicVerses.size + b.studies.size
     }
