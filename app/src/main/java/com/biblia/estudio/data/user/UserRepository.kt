@@ -124,6 +124,13 @@ class UserRepository(private val db: UserDatabase) {
 
     suspend fun deleteTag(id: Long) = db.withTransaction { dao.deleteTagVerses(id); dao.deleteTag(id) }
 
+    /** Borra una etiqueta y devuelve cómo restaurarla (para «Deshacer»). */
+    suspend fun deleteTagWithUndo(id: Long): (suspend () -> Unit) {
+        val tag = dao.tagNow(id); val verses = dao.tagVersesNow(id)
+        deleteTag(id)
+        return { if (tag != null) db.withTransaction { dao.insTags(listOf(tag)); dao.insTagVerses(verses) } }
+    }
+
     suspend fun addMemory(book: Int, chapter: Int, verse: Int, verseEnd: Int) =
         dao.addMemory(MemoryVerse(book = book, chapter = chapter, verse = verse, verseEnd = verseEnd, nextReview = today()))
 

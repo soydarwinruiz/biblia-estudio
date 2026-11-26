@@ -113,6 +113,10 @@ class MainActivity : ComponentActivity() {
         val data = intent.data ?: return null
         if (data.scheme != "codicevivo") return null
         return when (data.host) {
+            "ref" -> {
+                fun n(k: String) = data.getQueryParameter(k)?.toIntOrNull() ?: 0
+                if (n("b") in 1..66) refRoute(com.biblia.estudio.data.content.PassageRef(n("b"), n("c").coerceAtLeast(1), n("v"), n("c").coerceAtLeast(1), n("ve"))) else null
+            }
             "reader", "search", "memory", "journal", "today", "progress" -> data.host
             else -> null
         }

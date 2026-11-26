@@ -42,6 +42,20 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, colores del sistema (Material You), letra serif o sans, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
+### Novedades de la 1.8 (experiencia de uso)
+- **Estudios**: se guardan solos mientras escribes y al salir con el gesto o el botón «atrás».
+- **Deshacer**: al quitar un marcador, un versículo de un tema o de una etiqueta, una etiqueta completa, una nota,
+  un resaltado o un versículo de Memorizar aparece «Deshacer» durante unos segundos.
+- **Volver**: tras abrir una referencia desde el lector aparece «← Volver a Juan 3» (también vale el gesto atrás).
+- **Lector**: botón **Aa** (tamaño, interlineado, letra, tema, pantalla siempre encendida, ocultar barras),
+  **pellizcar** para agrandar el texto, barras que se ocultan al leer y vuelven al subir, barra de selección
+  con las acciones principales y el resto en «Más»; menú ⋮ con «Escuchar capítulo», notas e introducción.
+- **Resaltados** legibles en modo oscuro.
+- La **notificación diaria** y el **widget** abren el versículo directamente.
+- **Hoy**: las tarjetas completadas se pliegan a una línea; cualquier tarjeta se pliega tocando su título.
+- **Búsqueda** mientras escribes.
+- Accesibilidad: los botones de color tienen nombre para TalkBack.
+
 ### Novedades de la 1.7
 - **Agenda**: actividades que se repiten (cada día, semana, 2 semanas, mes o «el primer lunes / último viernes»),
   con fecha de fin; cada repetición aparece en su día y tiene su aviso. Botón para **añadirla al calendario** del teléfono.
@@ -105,8 +119,8 @@ pon la clave en `keystore/` y ejecuta `./gradlew assembleRelease`. El APK listo 
 Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
 ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/codice-vivo-1.7.apk
-./gradlew testDebugUnitTest    # 32 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
+adb install -r app/build/outputs/apk/release/codice-vivo-1.8.apk
+./gradlew testDebugUnitTest    # 33 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
 ```
 
 ## Regenerar la base de contenido

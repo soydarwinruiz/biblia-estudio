@@ -24,7 +24,7 @@ class ScreensTest {
     /** Las preferencias persisten entre pruebas: empezar siempre en Juan 1 con tema claro. */
     private fun reset() = kotlinx.coroutines.runBlocking {
         val a = rule.activity.app
-        a.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT, onboarded = true) }
+        a.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT, onboarded = true, immersiveReader = false, todayCollapsed = "") }
         a.settings.setPosition(43, 1); a.position = com.biblia.estudio.data.prefs.ReadingPosition(43, 1)
     }
 
@@ -151,6 +151,9 @@ class ScreensTest {
         rule.onNodeWithText("Mi reflexión").performScrollTo()
         shot("15_leccion_reflexion")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        kotlinx.coroutines.runBlocking {
+            container.user.setHighlight(43, 1, 1, 0xFFFFF176.toInt()); container.user.setHighlight(43, 1, 4, 0xFF90CAF9.toInt())
+        }
         rule.onNodeWithText("Biblia").performClick()
         waitText("El Verbo hecho carne")
         shot("16_lector_oscuro")
@@ -194,7 +197,8 @@ class ScreensTest {
         rule.onNodeWithText("Biblia").performClick()
         waitText("El Verbo hecho carne")
         rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
-        rule.onNodeWithText("Palabras").performClick()
+        rule.onNodeWithText("Más").performClick()
+        rule.onNodeWithText("Resaltar palabras").performClick()
         waitText("Toca las palabras que quieres marcar y elige un color.")
         rule.onAllNodesWithText("Verbo,").onFirst().performClick()
         shot("20_palabras_dialogo")
@@ -232,7 +236,8 @@ class ScreensTest {
         rule.onNodeWithText("Biblia").performClick()
         waitText("El Verbo hecho carne")
         rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
-        rule.onNode(hasText("Orar")).performScrollTo().performClick()
+        rule.onNodeWithText("Más").performClick()
+        rule.onNodeWithText("Orar por esto").performClick()
         waitText("Petición de oración")
         rule.onNode(hasSetTextAction() and hasText("Por qué o por quién oras")).performTextInput("Por mi familia")
         rule.onAllNodes(hasSetTextAction())[1].performTextInput("Señor, guarda a los míos.")
@@ -248,7 +253,8 @@ class ScreensTest {
         // Modo púlpito
         waitText("En el principio era el Verbo", true)
         rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
-        rule.onNode(hasText("Púlpito")).performScrollTo().performClick()
+        rule.onNodeWithText("Más").performClick()
+        rule.onNodeWithText("Modo púlpito").performClick()
         waitText("Velocidad de desplazamiento", true)
         shot("24_pulpito")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -256,7 +262,8 @@ class ScreensTest {
         // Imagen para compartir
         waitText("En el principio era el Verbo", true)
         rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
-        rule.onNode(hasText("Imagen")).performScrollTo().performClick()
+        rule.onNodeWithText("Más").performClick()
+        rule.onNodeWithText("Imagen para compartir").performClick()
         waitText("Imagen para compartir")
         shot("25_imagen_versiculo")
         rule.onNode(hasText("Cerrar") and hasAnyAncestor(isDialog())).performClick()
@@ -314,5 +321,68 @@ class ScreensTest {
         shot("28_ajustes_voz")
         rule.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Respaldo automático"))
         shot("29_ajustes_respaldo")
+    }
+
+    @Test fun usabilityImprovements() {
+        start()
+        reset()
+        val app = rule.activity.app
+        // 1) «Hoy»: una tarjeta completada se pliega a una línea con su resumen
+        rule.onAllNodesWithContentDescription("Marcar como completado").onFirst().performClick()
+        waitText("VERSÍCULO DEL DÍA")
+        rule.waitUntil(10_000) { rule.onAllNodesWithContentDescription("Desplegar").fetchSemanticsNodes().isNotEmpty() }
+        shot("34_hoy_plegado")
+
+        // 2) Lector: barra de selección compacta y «Aa»
+        rule.onNodeWithText("Biblia").performClick()
+        waitText("El Verbo hecho carne")
+        rule.onAllNodesWithText("En el principio era el Verbo", substring = true).onFirst().performClick()
+        shot("35_seleccion_compacta")
+        rule.onNodeWithText("Más").performClick()
+        waitText("Comparar versiones")
+        shot("36_seleccion_mas")
+        rule.onNodeWithText("Marcador").performClick()
+        rule.onNodeWithContentDescription("Texto y pantalla").performClick()
+        waitText("Texto y pantalla")
+        rule.onNodeWithText("A+").performClick(); rule.onNodeWithText("A+").performClick()
+        shot("37_texto_y_pantalla")
+        kotlinx.coroutines.runBlocking { rule.waitUntil(5_000) { kotlinx.coroutines.runBlocking { app.settings.current().fontSize } == 20f } }
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+
+        // 3) Deshacer: quitar un marcador desde Temas › Marcadores y deshacerlo
+        rule.onNodeWithText("Temas").performClick()
+        rule.onNodeWithText("Marcadores").performClick()
+        // El aviso dura unos segundos: se controla el reloj para que no desaparezca antes de comprobarlo
+        rule.mainClock.autoAdvance = false
+        rule.onNodeWithContentDescription("Quitar marcador").performClick()
+        var seen = false
+        repeat(100) { if (!seen) { rule.mainClock.advanceTimeBy(100); Thread.sleep(20); seen = rule.onAllNodesWithText("Deshacer").fetchSemanticsNodes().isNotEmpty() } }
+        org.junit.Assert.assertTrue("debe aparecer «Deshacer»", seen)
+        rule.onRoot().captureRoboImage("build/shots/38_deshacer.png")
+        rule.onNodeWithText("Deshacer").performClick()
+        rule.mainClock.autoAdvance = true
+        rule.waitUntil(10_000) { kotlinx.coroutines.runBlocking { app.user.dao.dumpBookmarks().size } == 1 }
+
+        // 4) Búsqueda mientras se escribe (sin pulsar Enter)
+        rule.onNodeWithText("Biblia").performClick()
+        waitText("El Verbo hecho carne")
+        rule.onNodeWithContentDescription("Buscar").performClick()
+        rule.onNode(hasSetTextAction()).performTextInput("contrito")
+        rule.waitUntil(60_000) { rule.onAllNodesWithText("resultado", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        shot("39_busqueda_al_escribir")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+
+        // 5) Estudio: salir con «atrás» del teléfono guarda lo escrito
+        rule.onNodeWithText("Estudio").performClick()
+        waitText("Nuevo estudio", true)
+        rule.onNodeWithText("Nuevo estudio", substring = true).performClick()
+        rule.onNodeWithText("Nuevo T.").performClick()
+        rule.onNodeWithText("Romanos").performClick()
+        rule.onNodeWithText("12").performClick()
+        waitText("Título del estudio")
+        rule.onNode(hasSetTextAction() and hasText("Título del estudio")).performTextClearance()
+        rule.onNode(hasSetTextAction() and hasText("Título del estudio")).performTextInput("Sacrificio vivo")
+        rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        rule.waitUntil(10_000) { kotlinx.coroutines.runBlocking { app.user.dao.dumpStudies().any { it.title == "Sacrificio vivo" } } }
     }
 }

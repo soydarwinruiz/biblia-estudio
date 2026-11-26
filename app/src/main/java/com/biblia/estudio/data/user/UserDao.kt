@@ -72,6 +72,11 @@ interface UserDao {
     @Query("DELETE FROM tag_verses WHERE tagId=:id") suspend fun deleteTagVerses(id: Long)
     @Query("SELECT * FROM tag_verses WHERE tagId=:id ORDER BY book, chapter, verse")
     fun tagVerses(id: Long): Flow<List<TagVerse>>
+    @Query("SELECT * FROM tag_verses WHERE tagId=:id") suspend fun tagVersesNow(id: Long): List<TagVerse>
+    @Query("SELECT * FROM tags WHERE id=:id") suspend fun tagNow(id: Long): Tag?
+    @Query("SELECT * FROM highlights WHERE book=:book AND chapter=:chapter AND verse=:verse") suspend fun highlightAt(book: Int, chapter: Int, verse: Int): Highlight?
+    @Query("SELECT * FROM bookmarks WHERE book=:book AND chapter=:chapter AND verse=:verse") suspend fun bookmarkAt(book: Int, chapter: Int, verse: Int): Bookmark?
+    @Query("SELECT * FROM topic_verses WHERE topicId=:topicId AND book=:book AND chapter=:chapter AND verse=:verse") suspend fun topicVerseAt(topicId: Long, book: Int, chapter: Int, verse: Int): TopicVerse?
     @Query("SELECT tagId FROM tag_verses WHERE book=:book AND chapter=:chapter AND verse=:verse")
     suspend fun tagsOfVerse(book: Int, chapter: Int, verse: Int): List<Long>
     @Query("SELECT DISTINCT verse FROM tag_verses WHERE book=:book AND chapter=:chapter UNION SELECT DISTINCT verse FROM topic_verses WHERE book=:book AND chapter=:chapter")

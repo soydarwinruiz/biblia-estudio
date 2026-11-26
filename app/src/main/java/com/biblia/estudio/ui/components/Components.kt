@@ -55,7 +55,7 @@ import com.biblia.estudio.ui.theme.Serif
 @Composable
 fun BackTopBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
     TopAppBar(
-        title = { Text(title, maxLines = 1) },
+        title = { Text(title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
         navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Atrás") } },
         actions = { actions() }
     )

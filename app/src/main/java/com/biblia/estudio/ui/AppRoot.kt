@@ -30,6 +30,7 @@ import androidx.navigation.navArgument
 import com.biblia.estudio.data.content.PassageRef
 import com.biblia.estudio.data.prefs.AppSettings
 import com.biblia.estudio.ui.screens.*
+import kotlinx.coroutines.launch
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 private val tabs = listOf(
@@ -41,12 +42,19 @@ private val tabs = listOf(
     Tab("progress", "Progreso", Icons.Filled.BarChart),
 )
 
+/** Visibilidad de las barras (el lector las oculta al leer). */
+val LocalBarsVisible = compositionLocalOf<androidx.compose.runtime.MutableState<Boolean>> { androidx.compose.runtime.mutableStateOf(true) }
+
 /** Ajustes actuales, accesibles desde cualquier pantalla y siempre al día. */
 val LocalSettings = compositionLocalOf { AppSettings() }
 
 fun refRoute(ref: PassageRef) = "reader?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ve=${if (ref.chapterEnd == ref.chapter) ref.verseEnd else 999}"
 
 fun NavController.openRef(ref: PassageRef) = navigate(refRoute(ref)) { launchSingleTop = true }
+
+/** Abre una referencia desde el lector dejando el capítulo actual en la pila, para poder volver a él. */
+fun NavController.openRefFromReader(ref: PassageRef, fromLabel: String) =
+    navigate(refRoute(ref) + "&from=" + android.net.Uri.encode(fromLabel))
 
 fun NavController.openPulpit(ref: PassageRef) =
     navigate("pulpit?b=${ref.book}&c=${ref.chapter}&v=${ref.verse}&ce=${ref.chapterEnd}&ve=${ref.verseEnd}")
@@ -57,14 +65,27 @@ fun NavController.newStudy(ref: PassageRef) =
 @Composable
 fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalConsumed: () -> Unit = {}) {
     val nav = rememberNavController()
+    val snackbar = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
+    val appScope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.biblia.estudio.ui.components.Undo.events.collect { ev ->
+            appScope.launch {
+                snackbar.currentSnackbarData?.dismiss()
+                val r = snackbar.showSnackbar(ev.message, actionLabel = "Deshacer", withDismissAction = true, duration = androidx.compose.material3.SnackbarDuration.Long)
+                if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) ev.undo()
+            }
+        }
+    }
     // Destinos pedidos desde fuera de la app (atajos, widgets, «Compartir»)
     androidx.compose.runtime.LaunchedEffect(externalRoute) {
         if (externalRoute != null) { nav.navigate(externalRoute) { launchSingleTop = true }; onExternalConsumed() }
     }
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "today"
-    val showBar = tabs.any { route.substringBefore("?") == it.route }
+    val barsVisible = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    val showBar = tabs.any { route.substringBefore("?") == it.route } && barsVisible.value
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
         bottomBar = {
             if (showBar) NavigationBar {
                 tabs.forEach { t ->
@@ -82,12 +103,13 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
             }
         }
     ) { pad ->
-        CompositionLocalProvider(LocalSettings provides settings) {
+        CompositionLocalProvider(LocalSettings provides settings, LocalBarsVisible provides barsVisible) {
         NavHost(nav, startDestination = "today", modifier = Modifier.padding(bottom = if (showBar) pad.calculateBottomPadding() else androidx.compose.ui.unit.Dp(0f))) {
             composable("today") { TodayScreen(nav, LocalSettings.current) }
             composable(
-                "reader?b={b}&c={c}&v={v}&ve={ve}",
+                "reader?b={b}&c={c}&v={v}&ve={ve}&from={from}",
                 arguments = listOf(
+                    navArgument("from") { type = NavType.StringType; defaultValue = "" },
                     navArgument("b") { type = NavType.IntType; defaultValue = 0 },
                     navArgument("c") { type = NavType.IntType; defaultValue = 0 },
                     navArgument("v") { type = NavType.IntType; defaultValue = 0 },
@@ -95,7 +117,7 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
                 )
             ) { e ->
                 val a = e.arguments!!
-                ReaderScreen(nav, LocalSettings.current, a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ve"))
+                ReaderScreen(nav, LocalSettings.current, a.getInt("b"), a.getInt("c"), a.getInt("v"), a.getInt("ve"), a.getString("from") ?: "")
             }
             composable("search?q={q}", arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })) { e -> SearchScreen(nav, LocalSettings.current, e.arguments!!.getString("q") ?: "") }
             composable("dictionary?q={q}", arguments = listOf(navArgument("q") { type = NavType.StringType; defaultValue = "" })) { e -> DictionaryScreen(nav, e.arguments!!.getString("q") ?: "") }

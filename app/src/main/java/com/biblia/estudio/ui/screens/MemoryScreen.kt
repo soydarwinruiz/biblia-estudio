@@ -81,7 +81,10 @@ fun MemoryScreen(nav: NavController, settings: AppSettings) {
             if (all.isEmpty()) item { EmptyState(Icons.Filled.Psychology, "Aún no hay versículos", "En el lector, selecciona un versículo y toca «Memorizar».") }
             items(all, key = { it.id }) { m ->
                 VerseItem(m.ref(), settings.version, BOX_NAMES[m.box.coerceIn(0, 6)] + if (m.nextReview <= today()) " · para hoy" else " · en ${days((m.nextReview - today()).toInt())}", null, { nav.openRef(m.ref()) }) {
-                    IconButton(onClick = { scope.launch { c.user.dao.deleteMemory(m.id) } }) { Icon(Icons.Filled.Delete, "Quitar") }
+                    IconButton(onClick = { scope.launch {
+                        c.user.dao.deleteMemory(m.id)
+                        com.biblia.estudio.ui.components.Undo.offer("Quitado de Memorizar: ${c.content.label(m.ref())}") { c.user.dao.upsertMemory(m) }
+                    } }) { Icon(Icons.Filled.Delete, "Quitar de Memorizar") }
                 }
             }
         }
