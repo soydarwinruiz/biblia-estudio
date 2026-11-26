@@ -80,7 +80,11 @@ fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String
         c.settings.addRecentSearch(query)
     }
     // Cada búsqueda nueva cancela la anterior, para que no la sobrescriba un resultado viejo.
-    fun run() { job?.cancel(); job = scope.launch { search() } }
+    var searching by remember { mutableStateOf(false) }
+    fun run() {
+        job?.cancel()
+        job = scope.launch { searching = true; try { search() } finally { searching = false } }
+    }
     LaunchedEffect(Unit) { if (initialQuery.isNotBlank()) run() }
     Scaffold(topBar = { BackTopBar("Buscar", { nav.popBackStack() }) }) { pad ->
         Column(Modifier.padding(pad)) {
@@ -103,7 +107,8 @@ fun SearchScreen(nav: NavController, settings: AppSettings, initialQuery: String
             val o = others
             val words = query.trim().split(Regex("\\s+")).filter { it.length > 1 }.map { fold(it) }
             LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                if (r == null && o == null && recent.isNotEmpty()) {
+                if (searching) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(16.dp)) }
+                if (r == null && o == null && recent.isNotEmpty() && !searching) {
                     item {
                         Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                             Text("Búsquedas recientes", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))

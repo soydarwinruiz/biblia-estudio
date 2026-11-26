@@ -33,6 +33,8 @@ import java.time.ZoneId
  */
 object Notifications {
     const val CHANNEL = "daily"
+    const val CHANNEL_EVENTS = "events"
+    const val CHANNEL_UPDATES = "updates"
     private const val LEGACY_WORK = "daily_verse"
     const val ACTION_REMIND = "com.biblia.estudio.action.REMIND"
     const val ACTION_MIDNIGHT = "com.biblia.estudio.action.MIDNIGHT"
@@ -41,7 +43,14 @@ object Notifications {
         val ch = NotificationChannel(CHANNEL, "Devocional diario", NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = "Versículo del día y recordatorio de lectura"
         }
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+        val nm = context.getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(ch)
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_EVENTS, "Agenda de la iglesia", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Avisos de cultos, ayunos, vigilias y demás actividades del Diario"
+        })
+        nm.createNotificationChannel(NotificationChannel(CHANNEL_UPDATES, "Actualizaciones", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = "Nuevas versiones de Códice vivo y sus novedades"
+        })
     }
 
     private fun pending(context: Context, action: String, code: Int): PendingIntent =
@@ -116,6 +125,10 @@ class ReminderReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 val app = context.applicationContext
+                if (intent.action == EventReminders.ACTION_EVENT) {
+                    runCatching { EventReminders.show(app, intent.getLongExtra(EventReminders.EXTRA_ID, -1)) }
+                    return@launch
+                }
                 withTimeoutOrNull(8_000) {
                     if (intent.action == Notifications.ACTION_REMIND) runCatching { Notifications.showDaily(app) }
                     runCatching { VerseWidget.refreshAll(app) }
@@ -138,6 +151,8 @@ class SystemEventsReceiver : BroadcastReceiver() {
                 val s = app.app.settings.current()
                 Notifications.schedule(app, s.notifications, s.notifyHour, s.notifyMinute)
                 AutoBackup.schedule(app, s.autoBackupDays)
+                runCatching { EventReminders.rescheduleAll(app) }
+                runCatching { UpdateCheck.schedule(app, s.updateCheck) }
                 runCatching { VerseWidget.refreshAll(app) }
             } finally { pending.finish() }
         }

@@ -405,6 +405,9 @@ fun ReaderScreen(nav: NavController, settings: AppSettings, argBook: Int, argCha
     previewRef?.let { r -> RefPreviewDialog(r, onDismiss = { previewRef = null }, onOpen = { sheet = null; nav.openRef(it) }) }
 }
 
+/** Nombre para la cuadrícula de libros: los muy largos se abrevian para que no se corten («1 Tesalonicenses» → «1 Tesal.»). */
+fun gridName(name: String): String = if (name.length <= 13) name else name.replace("Tesalonicenses", "Tesal.")
+
 /** Separa el texto en palabras conservando la puntuación pegada a cada una. */
 fun splitWords(text: String): List<String> = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
 
@@ -442,8 +445,10 @@ private fun VerseRow(
         }, style = style)
         if (parallel != null) Text(parallel, style = style.copy(fontSize = (settings.fontSize * 0.88f).sp), color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 10.dp, top = 2.dp, bottom = 4.dp))
-        if (hasStudyNote) Text("Nota de estudio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.clickable(onClick = onStudyNote).padding(vertical = 2.dp))
+        // Indicador discreto de nota MacArthur (a la derecha, sin ocupar una línea llamativa)
+        if (hasStudyNote) Text("nota MacArthur ›", style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f),
+            modifier = Modifier.align(Alignment.End).clip(RoundedCornerShape(4.dp)).clickable(onClick = onStudyNote).padding(horizontal = 4.dp))
     }
 }
 
@@ -563,7 +568,8 @@ fun BookChapterPicker(books: List<Book>, current: Int, onDismiss: () -> Unit, pi
                         items(books.filter { it.testament == testament }) { b ->
                             OutlinedButton(onClick = { selBook = b; if (b.chapters == 1) { if (pickVerse) selChapter = 1 else onPick(b.id, 1, 0) } }, modifier = Modifier.padding(2.dp), contentPadding = PaddingValues(4.dp),
                                 colors = if (b.id == current) ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else ButtonDefaults.outlinedButtonColors()) {
-                                Text(b.name, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                                Text(gridName(b.name), maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    style = if (b.name.length > 11) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
@@ -680,7 +686,7 @@ private fun TopicPickerDialog(book: Int, chapter: Int, verses: List<Int>, onDism
             TextButton(onClick = {
                 scope.launch {
                     val first = verses.first(); val last = verses.last()
-                    (chosen - current).forEach { id -> c.user.dao.addTopicVerse(TopicVerse(topicId = id, book = book, chapter = chapter, verse = first, verseEnd = last)) }
+                    (chosen - current).forEach { id -> c.user.addToTopic(id, book, chapter, first, last) }
                     (current - chosen).forEach { id -> c.user.dao.removeTopicVerse(id, book, chapter, first) }
                     onDismiss()
                 }

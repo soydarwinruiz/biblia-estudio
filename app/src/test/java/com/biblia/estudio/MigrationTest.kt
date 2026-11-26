@@ -32,4 +32,22 @@ class MigrationTest {
         db.query("SELECT COUNT(*) FROM journal").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
         db.close()
     }
+
+    @Test fun from4to5KeepsTopicsAndJournal() {
+        helper.createDatabase("mig5.db", 4).use { db ->
+            db.execSQL("INSERT INTO user_topics(id,name,description,color,created) VALUES (1,'Fe','',0,1)")
+            db.execSQL("INSERT INTO topic_verses(topicId,book,chapter,verse,verseEnd,note,created) VALUES (1,58,11,1,1,'',5)")
+            db.execSQL("INSERT INTO topic_verses(topicId,book,chapter,verse,verseEnd,note,created) VALUES (1,1,15,6,6,'',9)")
+            db.execSQL("INSERT INTO journal(kind,title,text,book,chapter,verse,answered,answeredAt,answerNote,created,updated) VALUES ('prayer','Familia','',0,0,0,0,0,'',1,1)")
+        }
+        val db = helper.runMigrationsAndValidate("mig5.db", 5, true)
+        // Sin orden guardado, se respeta el orden en que se añadieron (Hebreos antes que Génesis)
+        db.query("SELECT book, position FROM topic_verses WHERE topicId=1 ORDER BY position, created, id").use {
+            it.moveToFirst(); assertEquals(58, it.getInt(0)); assertEquals(0, it.getInt(1)); it.moveToNext(); assertEquals(1, it.getInt(0))
+        }
+        db.query("SELECT title, eventType, eventAt, place, reminderMinutes FROM journal").use {
+            it.moveToFirst(); assertEquals("Familia", it.getString(0)); assertEquals("", it.getString(1)); assertEquals(0L, it.getLong(2)); assertEquals(-1, it.getInt(4))
+        }
+        db.close()
+    }
 }

@@ -27,8 +27,8 @@ android {
         applicationId = "com.biblia.estudio"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.5"
+        versionCode = 8
+        versionName = "1.6"
     }
     signingConfigs {
         // Clave propia y estable: permite instalar actualizaciones sin desinstalar.

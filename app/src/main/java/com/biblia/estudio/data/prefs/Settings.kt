@@ -48,6 +48,8 @@ data class AppSettings(
     val autoBackupUri: String = "",
     val autoBackupDays: Int = 0,
     val onboarded: Boolean = false,
+    /** Comprobar una vez al día si hay una versión nueva (único uso de Internet). */
+    val updateCheck: Boolean = true,
 )
 
 data class ReadingPosition(val book: Int = 43, val chapter: Int = 1)
@@ -76,6 +78,7 @@ class SettingsRepository(private val context: Context) {
         val autoBackupUri = stringPreferencesKey("auto_backup_uri")
         val autoBackupDays = intPreferencesKey("auto_backup_days")
         val onboarded = booleanPreferencesKey("onboarded")
+        val updateCheck = booleanPreferencesKey("update_check")
         // Antiguas: la posición vivía aquí (se migra a «state»).
         val lastBook = intPreferencesKey("last_book")
         val lastChapter = intPreferencesKey("last_chapter")
@@ -85,6 +88,8 @@ class SettingsRepository(private val context: Context) {
         val lastChapter = intPreferencesKey("last_chapter")
         val lastAutoBackup = longPreferencesKey("last_auto_backup")
         val recentSearches = stringPreferencesKey("recent_searches")
+        val lastSeenVersion = longPreferencesKey("last_seen_version")
+        val lastUpdateNotified = longPreferencesKey("last_update_notified")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p -> p.toSettings() }.distinctUntilChanged()
@@ -112,6 +117,7 @@ class SettingsRepository(private val context: Context) {
         autoBackupUri = this[K.autoBackupUri] ?: "",
         autoBackupDays = this[K.autoBackupDays] ?: 0,
         onboarded = this[K.onboarded] ?: false,
+        updateCheck = this[K.updateCheck] ?: true,
     )
 
     suspend fun current(): AppSettings = settings.first()
@@ -126,7 +132,7 @@ class SettingsRepository(private val context: Context) {
             p[K.notifications] = s.notifications; p[K.notifyHour] = s.notifyHour; p[K.notifyMinute] = s.notifyMinute
             p[K.compareVersions] = s.compareVersions; p[K.continuous] = s.continuous
             p[K.ttsLocale] = s.ttsLocale; p[K.ttsRate] = s.ttsRate; p[K.audioContinue] = s.audioContinue
-            p[K.autoBackupUri] = s.autoBackupUri; p[K.autoBackupDays] = s.autoBackupDays; p[K.onboarded] = s.onboarded
+            p[K.autoBackupUri] = s.autoBackupUri; p[K.autoBackupDays] = s.autoBackupDays; p[K.onboarded] = s.onboarded; p[K.updateCheck] = s.updateCheck
         }
     }
 
@@ -160,6 +166,11 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun clearRecentSearches() { context.stateStore.edit { it.remove(S.recentSearches) } }
+
+    suspend fun lastSeenVersion(): Long = context.stateStore.data.first()[S.lastSeenVersion] ?: 0L
+    suspend fun setLastSeenVersion(v: Long) { context.stateStore.edit { it[S.lastSeenVersion] = v } }
+    suspend fun lastUpdateNotified(): Long = context.stateStore.data.first()[S.lastUpdateNotified] ?: 0L
+    suspend fun setLastUpdateNotified(v: Long) { context.stateStore.edit { it[S.lastUpdateNotified] = v } }
 
     suspend fun lastAutoBackup(): Long = context.stateStore.data.first()[S.lastAutoBackup] ?: 0L
     suspend fun setLastAutoBackup(time: Long) { context.stateStore.edit { it[S.lastAutoBackup] = time } }

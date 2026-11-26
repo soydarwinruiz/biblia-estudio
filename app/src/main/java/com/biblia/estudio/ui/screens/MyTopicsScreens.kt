@@ -5,6 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -171,28 +176,75 @@ fun TopicDetailScreen(nav: NavController, settings: AppSettings, id: Long) {
     val verses by c.user.dao.topicVerses(id).collectAsState(initial = emptyList())
     var edit by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    // Orden local mientras se arrastra; se guarda al soltar.
+    var order by remember(verses) { mutableStateOf(verses) }
+    var dragId by remember { mutableStateOf<Long?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    val listState = rememberLazyListState()
+    fun dragBy(dy: Float) {
+        val idd = dragId ?: return
+        dragOffset += dy
+        val items = listState.layoutInfo.visibleItemsInfo
+        val me = items.firstOrNull { it.key == idd } ?: return
+        val center = me.offset + me.size / 2 + dragOffset.toInt()
+        val target = items.firstOrNull { it.key is Long && it.key != idd && center in it.offset until it.offset + it.size } ?: return
+        val from = order.indexOfFirst { it.id == idd }; val to = order.indexOfFirst { it.id == target.key }
+        if (from < 0 || to < 0) return
+        order = order.toMutableList().apply { add(to, removeAt(from)) }
+        dragOffset += (me.offset - target.offset).toFloat()
+    }
     Scaffold(topBar = {
         BackTopBar(topic?.name ?: "Tema", { nav.popBackStack() }) {
             IconButton(onClick = {
                 scope.launch {
                     val txt = buildString {
                         appendLine(topic?.name ?: ""); topic?.description?.takeIf { it.isNotBlank() }?.let { appendLine(it) }; appendLine()
-                        verses.forEach { v -> val r = PassageRef(v.book, v.chapter, v.verse, v.chapter, v.verseEnd); appendLine("${c.content.label(r)}: ${c.content.passageText(settings.version, r)}") }
+                        order.forEach { v -> val r = PassageRef(v.book, v.chapter, v.verse, v.chapter, v.verseEnd); appendLine("${c.content.label(r)}: ${c.content.passageText(settings.version, r)}") }
                     }
                     shareText(ctx, txt)
                 }
             }) { Icon(Icons.Filled.Share, "Compartir") }
-            IconButton(onClick = { edit = true }) { Icon(Icons.Filled.Edit, "Editar") }
-            IconButton(onClick = { confirm = true }) { Icon(Icons.Filled.Delete, "Eliminar") }
+            Box {
+                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Más opciones") }
+                DropdownMenu(menu, { menu = false }) {
+                    DropdownMenuItem(text = { Text("Editar tema") }, leadingIcon = { Icon(Icons.Filled.Edit, null) }, onClick = { menu = false; edit = true })
+                    DropdownMenuItem(text = { Text("Ordenar por libro (Génesis → Apocalipsis)") }, leadingIcon = { Icon(Icons.Filled.SortByAlpha, null) },
+                        onClick = { menu = false; scope.launch { c.user.sortTopicByBook(id) } })
+                    DropdownMenuItem(text = { Text("Eliminar tema") }, leadingIcon = { Icon(Icons.Filled.Delete, null) }, onClick = { menu = false; confirm = true })
+                }
+            }
         }
     }) { pad ->
-        LazyColumn(Modifier.padding(pad)) {
-            topic?.description?.takeIf { it.isNotBlank() }?.let { d -> item { Text(d, Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium) } }
-            if (verses.isEmpty()) item { EmptyState(Icons.Filled.FolderSpecial, "Tema vacío", "En el lector, selecciona versículos y toca «Tema».") }
-            items(verses) { v ->
+        LazyColumn(Modifier.padding(pad), state = listState, contentPadding = PaddingValues(bottom = 24.dp)) {
+            topic?.description?.takeIf { it.isNotBlank() }?.let { d -> item(key = "desc") { Text(d, Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium) } }
+            if (order.isEmpty()) item(key = "empty") { EmptyState(Icons.Filled.FolderSpecial, "Tema vacío", "En el lector, selecciona versículos y toca «Tema».") }
+            else if (order.size > 1) item(key = "hint") {
+                Text("Mantén y arrastra ⠿ para cambiar el orden", Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+            }
+            items(order, key = { it.id }) { v ->
                 val ref = PassageRef(v.book, v.chapter, v.verse, v.chapter, v.verseEnd)
-                VerseItem(ref, settings.version, v.note, null, { nav.openRef(ref) }) {
-                    IconButton(onClick = { scope.launch { c.user.dao.removeTopicVerse(id, v.book, v.chapter, v.verse) } }) { Icon(Icons.Filled.RemoveCircleOutline, "Quitar") }
+                val dragging = dragId == v.id
+                Row(
+                    Modifier.fillMaxWidth()
+                        .then(if (dragging) Modifier.zIndex(1f).graphicsLayer { translationY = dragOffset; shadowElevation = 12f }
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh) else Modifier.animateItem()),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.DragIndicator, "Arrastrar para ordenar", tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(start = 8.dp).size(28.dp).pointerInput(v.id) {
+                            detectDragGestures(
+                                onDragStart = { dragId = v.id; dragOffset = 0f },
+                                onDragEnd = { val ids = order.map { it.id }; dragId = null; dragOffset = 0f; scope.launch { c.user.reorderTopic(ids) } },
+                                onDragCancel = { dragId = null; dragOffset = 0f; order = verses },
+                                onDrag = { change, amount -> change.consume(); dragBy(amount.y) }
+                            )
+                        })
+                    Box(Modifier.weight(1f)) {
+                        VerseItem(ref, settings.version, v.note, null, { nav.openRef(ref) }) {
+                            IconButton(onClick = { scope.launch { c.user.dao.removeTopicVerse(id, v.book, v.chapter, v.verse) } }) { Icon(Icons.Filled.RemoveCircleOutline, "Quitar") }
+                        }
+                    }
                 }
             }
         }

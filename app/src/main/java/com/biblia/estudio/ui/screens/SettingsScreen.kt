@@ -38,6 +38,7 @@ fun SettingsScreen(nav: NavController, s: AppSettings) {
         c.settings.update(f); val n = c.settings.current()
         if (n.notifications != before.notifications || n.notifyHour != before.notifyHour || n.notifyMinute != before.notifyMinute)
             runCatching { Notifications.schedule(ctx.applicationContext, n.notifications, n.notifyHour, n.notifyMinute) }
+        if (n.updateCheck != before.updateCheck) runCatching { com.biblia.estudio.work.UpdateCheck.schedule(ctx.applicationContext, n.updateCheck) }
         if (n.autoBackupDays != before.autoBackupDays) runCatching { AutoBackup.schedule(ctx.applicationContext, n.autoBackupDays) }
     }
     val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -163,9 +164,29 @@ fun SettingsScreen(nav: NavController, s: AppSettings) {
             Text("Además, Android incluye tus datos (no la Biblia) en la copia de seguridad de Google del teléfono si la tienes activada.",
                 Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
 
+            SectionHeader("Actualizaciones")
+            SwitchRow("Avisarme cuando haya una versión nueva", s.updateCheck) { v -> set { it.copy(updateCheck = v) } }
+            Text("Una vez al día, solo con conexión, la app lee un archivo público con el número de la última versión. No envía ningún dato tuyo.",
+                Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
+            Row(Modifier.padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                OutlinedButton(onClick = {
+                    scope.launch {
+                        val msg = try {
+                            val info = com.biblia.estudio.work.UpdateCheck.check(ctx.applicationContext, notify = false)
+                            if (info != null) { com.biblia.estudio.work.UpdateCheck.notifyUpdate(ctx.applicationContext, info); "Hay una versión nueva: ${info.versionName}" }
+                            else "Tienes la versión más reciente"
+                        } catch (e: Exception) { "No se pudo comprobar (¿sin conexión?)" }
+                        Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
+                    }
+                }) { Text("Buscar ahora") }
+                Spacer(Modifier.width(12.dp))
+                Text("Versión instalada: " + com.biblia.estudio.work.UpdateCheck.currentVersion(ctx).second, style = MaterialTheme.typography.bodySmall)
+            }
+
             SectionHeader("Acerca de")
             Text(
-                "Códice vivo — Biblia de estudio 100% local: no solicita permiso de Internet; todo el contenido y tus datos permanecen en el dispositivo.\n\n" +
+                "Códice vivo — Biblia de estudio\nCreada por Danruz.\n\n" +
+                "Todo el contenido y tus datos permanecen en el dispositivo. Internet solo se usa, si lo permites, para avisarte de nuevas versiones.\n\n" +
                 "Contenido de estudio: Biblia de Estudio MacArthur (© Editorial Portavoz / Thomas Nelson), incluida para uso personal.\n\n" +
                 "Textos bíblicos: " + c.content.versions.joinToString("\n") { "• ${it.id}: ${it.copyright.ifBlank { it.name }}" },
                 Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall
@@ -187,6 +208,7 @@ fun SettingsScreen(nav: NavController, s: AppSettings) {
                     try {
                         val text = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() } } ?: error("No se pudo leer")
                         c.user.importJson(text)
+                        runCatching { com.biblia.estudio.work.EventReminders.rescheduleAll(ctx.applicationContext) }
                         Toast.makeText(ctx, "Respaldo restaurado", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) { Toast.makeText(ctx, "Archivo no válido: ${e.message}", Toast.LENGTH_LONG).show() }
                 }
