@@ -70,8 +70,10 @@ class UserRepository(private val db: UserDatabase) {
         return award("ch:$book:$chapter", Points.CHAPTER)
     }
 
-    suspend fun markDevotional(type: String) {
-        if (dao.insertDevotional(DevotionalDone(today(), type)) != -1L) addPoints(Points.DEVOTIONAL)
+    /** Marca un elemento devocional de hoy. Devuelve true si se acaba de completar (y sumó puntos). */
+    suspend fun markDevotional(type: String): Boolean {
+        if (dao.insertDevotional(DevotionalDone(today(), type)) == -1L) return false
+        addPoints(Points.DEVOTIONAL); return true
     }
 
     suspend fun saveQuiz(correct: Int, total: Int): Boolean {

@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -175,6 +177,7 @@ fun ArticleScreen(nav: NavController, settings: AppSettings, id: Int) {
     preview?.let { RefPreviewDialog(it, { preview = null }) { r -> nav.openRef(r) } }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
     val c = LocalContext.current.app; val scope = rememberCoroutineScope()
@@ -184,7 +187,24 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
     val todayId by produceState(-1) { value = c.content.lessonOfDay(today()).id }
     var preview by remember { mutableStateOf<PassageRef?>(null) }
     val reflection by c.user.dao.reflection(id).collectAsState(initial = null)
-    var draft by remember(id, reflection) { mutableStateOf(reflection?.text ?: "") }
+    // La reflexión se edita en local y se guarda sola (no se pisa con lo guardado mientras se escribe)
+    var draft by remember(id) { mutableStateOf<String?>(null) }
+    val text = draft ?: reflection?.text ?: ""
+    var saveNote by remember(id) { mutableStateOf("") }
+    suspend fun saveReflection() {
+        val d = draft ?: return
+        if (d.trim() == (reflection?.text ?: "")) return
+        if (d.isBlank()) c.user.dao.deleteReflection(id) else c.user.dao.upsertReflection(com.biblia.estudio.data.user.LessonReflection(id, d.trim()))
+        saveNote = if (d.isBlank()) "" else "Reflexión guardada ✓"
+    }
+    LaunchedEffect(draft) { if (draft != null) { saveNote = "Guardando…"; kotlinx.coroutines.delay(1000); saveReflection() } }
+    // Al salir se guarda lo pendiente
+    DisposableEffect(id) { onDispose { val d = draft; if (d != null && d.trim() != (reflection?.text ?: "")) kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        if (d.isBlank()) c.user.dao.deleteReflection(id) else c.user.dao.upsertReflection(com.biblia.estudio.data.user.LessonReflection(id, d.trim())) } } }
+    val doneToday by c.user.dao.devotionalDone(today()).collectAsState(initial = emptyList())
+    val lessonDone = doneToday.any { it.type == "lesson" }
+    val ctx = LocalContext.current
+    val bring = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
     val speaking by c.speaker.speaking.collectAsState()
     DisposableEffect(id) { onDispose { if (c.speaker.speaking.value?.startsWith("lesson") == true) c.speaker.stop() } }
     Scaffold(topBar = { BackTopBar("Lección ${id} de $total", { nav.popBackStack() }) {
@@ -206,25 +226,30 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
             InfoCardPlain {
                 Text("Para reflexionar", style = MaterialTheme.typography.titleMedium)
                 l.questions.forEachIndexed { i, q -> Text("${i + 1}. $q", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 6.dp)) }
-                OutlinedTextField(draft, { draft = it }, Modifier.fillMaxWidth().padding(top = 10.dp), label = { Text("Mi reflexión") },
-                    placeholder = { Text("Escribe tus respuestas y lo que Dios te enseña…") }, minLines = 4)
-                Row {
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = {
-                        scope.launch {
-                            if (draft.isBlank()) c.user.dao.deleteReflection(id)
-                            else c.user.dao.upsertReflection(com.biblia.estudio.data.user.LessonReflection(id, draft.trim()))
-                            android.widget.Toast.makeText(nav.context, "Reflexión guardada", android.widget.Toast.LENGTH_SHORT).show()
-                        }
-                    }, enabled = draft != (reflection?.text ?: "")) { Text("Guardar reflexión") }
-                }
+                OutlinedTextField(text, { draft = it },
+                    Modifier.fillMaxWidth().padding(top = 10.dp).bringIntoViewRequester(bring)
+                        .onFocusEvent { f -> if (f.isFocused) scope.launch { kotlinx.coroutines.delay(350); bring.bringIntoView() } },
+                    label = { Text("Mi reflexión") }, placeholder = { Text("Escribe tus respuestas y lo que Dios te enseña…") }, minLines = 4)
+                Text(if (saveNote.isNotBlank()) saveNote else "Se guarda automáticamente", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f), modifier = Modifier.padding(top = 4.dp))
                 if (l.book > 0) TextButton(onClick = { nav.navigate("intro/${l.book}") }) { Text("Ver introducción completa del libro") }
             }
             Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = { id-- }, enabled = id > 1) { Text("‹ Anterior") }
                 Spacer(Modifier.weight(1f))
-                if (id == todayId) Button(onClick = { scope.launch { c.user.markDevotional("lesson") } }) { Text("Completar") }
+                if (id == todayId) {
+                    if (lessonDone) FilledTonalButton(onClick = {}, enabled = false) { Text("Completada ✓") }
+                    else Button(onClick = {
+                        scope.launch {
+                            saveReflection()
+                            val won = c.user.markDevotional("lesson")
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                                android.widget.Toast.makeText(ctx, if (won) "Lección completada · +${com.biblia.estudio.data.user.Points.DEVOTIONAL} puntos" else "Lección completada", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }) { Text("Completar") }
+                }
                 Spacer(Modifier.weight(1f))
                 OutlinedButton(onClick = { id++ }, enabled = id < total) { Text("Siguiente ›") }
             }

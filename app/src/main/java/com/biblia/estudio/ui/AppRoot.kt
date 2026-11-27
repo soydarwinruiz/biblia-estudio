@@ -1,6 +1,8 @@
 package com.biblia.estudio.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.BarChart
@@ -83,7 +85,10 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route ?: "today"
     val barsVisible = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
-    val showBar = tabs.any { route.substringBefore("?") == it.route } && barsVisible.value
+    // Con el teclado abierto se oculta la barra inferior y el contenido se ajusta encima del teclado
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    val imeOpen = androidx.compose.foundation.layout.WindowInsets.isImeVisible
+    val showBar = tabs.any { route.substringBefore("?") == it.route } && barsVisible.value && !imeOpen
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
         bottomBar = {
@@ -104,7 +109,7 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
         }
     ) { pad ->
         CompositionLocalProvider(LocalSettings provides settings, LocalBarsVisible provides barsVisible) {
-        NavHost(nav, startDestination = "today", modifier = Modifier.padding(bottom = if (showBar) pad.calculateBottomPadding() else androidx.compose.ui.unit.Dp(0f))) {
+        NavHost(nav, startDestination = "today", modifier = Modifier.padding(bottom = if (showBar) pad.calculateBottomPadding() else androidx.compose.ui.unit.Dp(0f)).imePadding()) {
             composable("today") { TodayScreen(nav, LocalSettings.current) }
             composable(
                 "reader?b={b}&c={c}&v={v}&ve={ve}&from={from}",
