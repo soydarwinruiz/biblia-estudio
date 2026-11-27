@@ -342,11 +342,13 @@ class ScreensTest {
         waitText("Comparar versiones")
         shot("36_seleccion_mas")
         rule.onNodeWithText("Marcador").performClick()
+        rule.waitUntil(10_000) { kotlinx.coroutines.runBlocking { app.user.dao.dumpBookmarks().isNotEmpty() } }
         rule.onNodeWithContentDescription("Texto y pantalla").performClick()
         waitText("Texto y pantalla")
+        val before = kotlinx.coroutines.runBlocking { app.settings.current().fontSize }
         rule.onNodeWithText("A+").performClick(); rule.onNodeWithText("A+").performClick()
         shot("37_texto_y_pantalla")
-        kotlinx.coroutines.runBlocking { rule.waitUntil(5_000) { kotlinx.coroutines.runBlocking { app.settings.current().fontSize } == 20f } }
+        rule.waitUntil(5_000) { kotlinx.coroutines.runBlocking { app.settings.current().fontSize } == (before + 2f).coerceAtMost(34f) }
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
 
         // 3) Deshacer: quitar un marcador desde Temas › Marcadores y deshacerlo
@@ -426,6 +428,7 @@ class ScreensTest {
         start()
         reset()
         val app = rule.activity.app
+        kotlinx.coroutines.runBlocking { app.settings.update { it.copy(fontSize = 26f) } }   // letra grande, como en el teléfono del usuario
         waitText("Estudiar lección")
         rule.onNodeWithText("Estudiar lección").performScrollTo().performClick()
         waitText("Mi reflexión")
@@ -435,8 +438,9 @@ class ScreensTest {
         val lessonId = kotlinx.coroutines.runBlocking { app.content.lessonOfDay(com.biblia.estudio.data.user.today()).id }
         rule.waitUntil(10_000) { kotlinx.coroutines.runBlocking { app.user.dao.dumpReflections().any { it.lessonId == lessonId && it.text == "Dios es el centro de todo." } } }
         // «Completar» marca la lección y cambia a «Completada ✓»
-        rule.onNodeWithText("Completar").performScrollTo().performClick()
-        waitText("Completada ✓")
+        rule.onNodeWithText("Completar la lección de hoy", substring = true).performScrollTo().performClick()
+        waitText("Lección de hoy completada", true)
+        rule.onNodeWithText("Siguiente ›").performScrollTo()
         shot("45_leccion_completada")
         val done = kotlinx.coroutines.runBlocking { app.user.dao.dumpDevotional().any { it.type == "lesson" && it.epochDay == com.biblia.estudio.data.user.today() } }
         org.junit.Assert.assertTrue(done)

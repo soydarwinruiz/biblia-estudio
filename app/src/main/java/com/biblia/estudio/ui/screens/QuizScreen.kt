@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -80,8 +81,9 @@ fun QuizScreen(nav: NavController, practice0: Boolean) {
             val q = qs[index]
             LinearProgressIndicator(progress = { (index + (if (chosen != null) 1 else 0)).toFloat() / qs.size }, modifier = Modifier.fillMaxWidth())
             Row(Modifier.padding(vertical = 8.dp)) {
-                Text("Pregunta ${index + 1} de ${qs.size}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                Text(q.category + " · " + "★".repeat(q.difficulty), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                Text("Pregunta ${index + 1} de ${qs.size}", style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+                Text(q.category + " · " + "★".repeat(q.difficulty), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1f).padding(start = 8.dp))
             }
             Text(q.question, style = MaterialTheme.typography.titleLarge.copy(fontFamily = Serif), modifier = Modifier.padding(vertical = 12.dp))
             q.options.forEachIndexed { i, opt ->

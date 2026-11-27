@@ -42,6 +42,15 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, colores del sistema (Material You), letra serif o sans, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
+### Novedades de la 1.9.2 (letra grande)
+- Revisión de todas las pantallas con **pantalla estrecha y letra del sistema grande**: los textos de una línea se
+  ajustan en vez de partirse (barra inferior, estadísticas de Hoy y Progreso, botones de Estudio, respuestas de
+  Memorizar, cabecera de Preguntas, fecha y hora de la Agenda). La fecha de «Hoy» va bajo el saludo.
+- **Lección**: «Completar la lección de hoy» está dentro de la tarjeta, bajo la reflexión; una vez hecha queda
+  «✓ Lección de hoy completada». Abajo solo «‹ Anterior» y «Siguiente ›», del mismo ancho.
+- Comparar ya no muestra «‹ v. 0»; el Diario no enseña un instante la lista de otra pestaña; plurales corregidos.
+- Prueba nueva `LargeFontAuditTest` (360 dp, letra al 130 %) con capturas de 30 pantallas.
+
 ### Novedades de la 1.9.1 (correcciones)
 - El **teclado** ya no tapa lo que escribes: el contenido se ajusta encima del teclado en toda la app y la barra
   inferior se oculta mientras escribes.
@@ -133,8 +142,8 @@ pon la clave en `keystore/` y ejecuta `./gradlew assembleRelease`. El APK listo 
 Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
 ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/codice-vivo-1.9.1.apk
-./gradlew testDebugUnitTest    # 36 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
+adb install -r app/build/outputs/apk/release/codice-vivo-1.9.2.apk
+./gradlew testDebugUnitTest    # 37 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
 ```
 
 ## Regenerar la base de contenido

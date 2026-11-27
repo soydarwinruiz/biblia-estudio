@@ -186,9 +186,9 @@ fun CompareScreen(nav: NavController, settings: AppSettings, book: Int, chapter:
     Scaffold(topBar = { BackTopBar("Comparar · ${c.content.book(book).name} $chapter:$v", { nav.popBackStack() }) }) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             Row(Modifier.padding(horizontal = 16.dp)) {
-                OutlinedButton(onClick = { if (v > 1) v-- }, enabled = v > 1) { Text("‹ v. ${v - 1}") }
+                if (v > 1) OutlinedButton(onClick = { v-- }) { Text("‹ v. ${v - 1}") }
                 Spacer(Modifier.weight(1f))
-                OutlinedButton(onClick = { if (v < maxV) v++ }, enabled = v < maxV) { Text("v. ${v + 1} ›") }
+                if (v < maxV) OutlinedButton(onClick = { v++ }) { Text("v. ${v + 1} ›") }
             }
             LazyColumn(contentPadding = PaddingValues(16.dp)) {
                 items(rows.orEmpty()) { r ->

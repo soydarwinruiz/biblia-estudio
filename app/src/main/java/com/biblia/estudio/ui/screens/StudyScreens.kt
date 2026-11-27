@@ -45,10 +45,13 @@ fun StudyHubScreen(nav: NavController) {
                 InfoCard {
                     Text("Estudio de un pasaje", style = MaterialTheme.typography.titleMedium)
                     Text("Recorre paso a paso el contexto, la exégesis, la hermenéutica y la homilética de un pasaje, con las notas de MacArthur a mano.", style = MaterialTheme.typography.bodyMedium)
-                    Row(Modifier.padding(top = 8.dp)) {
-                        Button(onClick = { picker = "study" }) { Icon(Icons.Filled.Add, null); Text(" Nuevo estudio") }
-                        Spacer(Modifier.width(8.dp))
-                        OutlinedButton(onClick = { nav.navigate("studies") }) { Text("Mis estudios (${studies.size})") }
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { picker = "study" }, Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                            Icon(Icons.Filled.Add, null); FitText(" Nuevo estudio", MaterialTheme.typography.labelLarge)
+                        }
+                        OutlinedButton(onClick = { nav.navigate("studies") }, Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                            FitText("Mis estudios (${studies.size})", MaterialTheme.typography.labelLarge)
+                        }
                     }
                 }
             }
@@ -232,15 +235,12 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
                     label = { Text("Mi reflexión") }, placeholder = { Text("Escribe tus respuestas y lo que Dios te enseña…") }, minLines = 4)
                 Text(if (saveNote.isNotBlank()) saveNote else "Se guarda automáticamente", style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f), modifier = Modifier.padding(top = 4.dp))
-                if (l.book > 0) TextButton(onClick = { nav.navigate("intro/${l.book}") }) { Text("Ver introducción completa del libro") }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { id-- }, enabled = id > 1) { Text("‹ Anterior") }
-                Spacer(Modifier.weight(1f))
+                // Lección del día: al terminar se marca aquí; una vez hecha queda solo un aviso
                 if (id == todayId) {
-                    if (lessonDone) FilledTonalButton(onClick = {}, enabled = false) { Text("Completada ✓") }
-                    else Button(onClick = {
+                    if (lessonDone) Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text("  Lección de hoy completada", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    } else Button(onClick = {
                         scope.launch {
                             saveReflection()
                             val won = c.user.markDevotional("lesson")
@@ -248,10 +248,15 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
                                 android.widget.Toast.makeText(ctx, if (won) "Lección completada · +${com.biblia.estudio.data.user.Points.DEVOTIONAL} puntos" else "Lección completada", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
-                    }) { Text("Completar") }
+                    }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) { Icon(Icons.Filled.Done, null); Text("  Completar la lección de hoy") }
                 }
-                Spacer(Modifier.weight(1f))
-                OutlinedButton(onClick = { id++ }, enabled = id < total) { Text("Siguiente ›") }
+                if (l.book > 0) TextButton(onClick = { nav.navigate("intro/${l.book}") }) { Text("Ver introducción completa del libro") }
+            }
+            Spacer(Modifier.height(12.dp))
+            // Navegación entre lecciones: dos botones del mismo ancho, en una sola línea
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = { id-- }, enabled = id > 1, modifier = Modifier.weight(1f)) { Text("‹ Anterior", maxLines = 1) }
+                OutlinedButton(onClick = { id++ }, enabled = id < total, modifier = Modifier.weight(1f)) { Text("Siguiente ›", maxLines = 1) }
             }
         }
     }

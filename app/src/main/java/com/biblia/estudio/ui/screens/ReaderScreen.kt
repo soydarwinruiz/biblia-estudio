@@ -762,7 +762,7 @@ private fun NoteDialog(book: Int, chapter: Int, verse: Int, existing: List<Verse
                 }
                 Text(if (editing != null) "Editando nota" else if (notes.isEmpty()) "Nueva nota" else "Añadir otra nota",
                     style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
-                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().heightIn(min = 120.dp), placeholder = { Text("Escribe tu reflexión, aplicación u observación…") })
+                OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), minLines = 4, placeholder = { Text("Escribe tu reflexión, aplicación u observación…") })
                 if (notes.isNotEmpty()) TextButton(onClick = { save(close = false) }, enabled = text.isNotBlank()) {
                     Icon(Icons.Filled.Add, null); Text(if (editing != null) " Guardar y escribir otra" else " Guardar y añadir otra")
                 }

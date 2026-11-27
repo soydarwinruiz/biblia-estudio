@@ -102,7 +102,7 @@ fun AppRoot(settings: AppSettings, externalRoute: String? = null, onExternalCons
                                 launchSingleTop = true; restoreState = true
                             }
                         },
-                        icon = { Icon(t.icon, t.label) }, label = { Text(t.label, maxLines = 1, softWrap = false, style = androidx.compose.material3.MaterialTheme.typography.labelSmall) }
+                        icon = { Icon(t.icon, t.label) }, label = { com.biblia.estudio.ui.components.FitText(t.label, androidx.compose.material3.MaterialTheme.typography.labelSmall) }
                     )
                 }
             }

@@ -58,7 +58,11 @@ fun JournalScreen(nav: NavController, initialTab: Int = 0) {
     val c = LocalContext.current.app
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     val kind = when (tab) { 0 -> "event"; 1 -> "prayer"; else -> "journal" }
-    val entries by remember(kind) { if (kind == "event") c.user.dao.events() else c.user.dao.journal(kind) }.collectAsState(initial = null)
+    // Al cambiar de pestaña se empieza vacío (antes se veía un instante la lista de la pestaña anterior)
+    val entries by produceState<List<JournalEntry>?>(null, kind) {
+        value = null   // produceState conserva el valor anterior al cambiar de clave: se vacía explícitamente
+        (if (kind == "event") c.user.dao.events() else c.user.dao.journal(kind)).collect { value = it }
+    }
     val answered by c.user.dao.answeredCount().collectAsState(initial = 0)
     var showPast by rememberSaveable { mutableStateOf(false) }
     Scaffold(
@@ -240,10 +244,14 @@ fun JournalEditScreen(nav: NavController, id: Long, kind: String, ref: PassageRe
                 OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), singleLine = true,
                     label = { Text("Nombre de la actividad") }, placeholder = { Text("p. ej. Ayuno congregacional, Vigilia de jóvenes") })
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1.6f)) {
-                        Icon(Icons.Filled.CalendarMonth, null); Text("  " + shortDayFmt.format(Date(eventAt)).replaceFirstChar { it.uppercase() }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    OutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1.7f), contentPadding = PaddingValues(horizontal = 10.dp)) {
+                        Icon(Icons.Filled.CalendarMonth, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                        com.biblia.estudio.ui.components.FitText(shortDayFmt.format(Date(eventAt)).replaceFirstChar { it.uppercase() }, MaterialTheme.typography.labelLarge)
                     }
-                    OutlinedButton(onClick = { pickTime = true }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.Schedule, null); Text("  " + timeFmt.format(Date(eventAt))) }
+                    OutlinedButton(onClick = { pickTime = true }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 10.dp)) {
+                        Icon(Icons.Filled.Schedule, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
+                        com.biblia.estudio.ui.components.FitText(timeFmt.format(Date(eventAt)), MaterialTheme.typography.labelLarge)
+                    }
                 }
                 OutlinedTextField(place, { place = it }, Modifier.fillMaxWidth().padding(top = 12.dp), singleLine = true,
                     label = { Text("Lugar") }, leadingIcon = { Icon(Icons.Filled.Place, null) }, placeholder = { Text("Templo, casa, dirección…") })

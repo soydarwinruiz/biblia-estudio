@@ -171,8 +171,28 @@ fun RefPreviewDialog(ref: PassageRef, onDismiss: () -> Unit, onOpen: (PassageRef
 
 @Composable
 fun StatPill(icon: String, value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("$icon $value", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // Cada dato en una sola línea: si no cabe (letra grande del teléfono), la letra se reduce un poco
+    Column(modifier.padding(horizontal = 2.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        FitText("$icon $value", MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+        FitText(label, MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * Texto de una sola línea que reduce su tamaño (hasta un 65 %) si no cabe en el ancho disponible,
+ * en lugar de partirse o cortarse. Útil con la letra del sistema grande y pantallas estrechas.
+ */
+@Composable
+fun FitText(text: String, style: androidx.compose.ui.text.TextStyle, modifier: Modifier = Modifier,
+            color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
+            textAlign: androidx.compose.ui.text.style.TextAlign? = null) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        val full = measurer.measure(text, style, maxLines = 1, softWrap = false).size.width
+        val max = constraints.maxWidth
+        val scale = if (max == androidx.compose.ui.unit.Constraints.Infinity || full <= max || full == 0) 1f else (max.toFloat() / full).coerceAtLeast(0.65f)
+        val st = if (scale < 1f) style.copy(fontSize = style.fontSize * scale, letterSpacing = style.letterSpacing * scale) else style
+        Text(text, style = st, color = color, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            textAlign = textAlign)
     }
 }
