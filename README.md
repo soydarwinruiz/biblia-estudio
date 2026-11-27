@@ -42,6 +42,14 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
 - **Continuar leyendo**, **días anteriores** del contenido diario, **deslizar** para cambiar de capítulo y **reflexiones guardadas** en las lecciones.
 - **Ajustes**: tema claro, oscuro o sepia, colores del sistema (Material You), letra serif o sans, tamaño de letra, interlineado, versión predeterminada, recordatorio y **respaldo/restauración en JSON**.
 
+### Novedades de la 1.9
+- **Recorrido de bienvenida**: antes de empezar, la app pide el nombre (opcional) y muestra en pocas pantallas
+  cómo usar cada parte: Hoy, la Biblia, qué hacer al tocar un versículo, Aa y audio, Estudio, Diario, Temas y Progreso,
+  y la privacidad de tus datos. Se puede saltar y repetir desde Ajustes › Ver el recorrido de bienvenida.
+  Quien actualiza desde una versión anterior lo ve una vez.
+- **Saludo personal** en «Hoy» y en el aviso diario: «Buenos días, Ana» (5–11 h), «Buenas tardes» (12–18 h),
+  «Buenas noches» (19–4 h). El nombre se cambia en Ajustes › Tú.
+
 ### Novedades de la 1.8 (experiencia de uso)
 - **Estudios**: se guardan solos mientras escribes y al salir con el gesto o el botón «atrás».
 - **Deshacer**: al quitar un marcador, un versículo de un tema o de una etiqueta, una etiqueta completa, una nota,
@@ -119,8 +127,8 @@ pon la clave en `keystore/` y ejecuta `./gradlew assembleRelease`. El APK listo 
 Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
 ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/codice-vivo-1.8.apk
-./gradlew testDebugUnitTest    # 33 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
+adb install -r app/build/outputs/apk/release/codice-vivo-1.9.apk
+./gradlew testDebugUnitTest    # 35 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
 ```
 
 ## Regenerar la base de contenido

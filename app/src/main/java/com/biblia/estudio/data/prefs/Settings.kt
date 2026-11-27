@@ -56,6 +56,10 @@ data class AppSettings(
     val immersiveReader: Boolean = true,
     /** Secciones de «Hoy» plegadas por el usuario (claves separadas por comas). */
     val todayCollapsed: String = "",
+    /** Nombre para personalizar el saludo («Buenos días, Ana»). Vacío = sin nombre. */
+    val userName: String = "",
+    /** Ya vio el recorrido de bienvenida (versión 1.9). */
+    val tourSeen: Boolean = false,
 )
 
 data class ReadingPosition(val book: Int = 43, val chapter: Int = 1)
@@ -88,6 +92,8 @@ class SettingsRepository(private val context: Context) {
         val keepScreenOn = booleanPreferencesKey("keep_screen_on")
         val immersiveReader = booleanPreferencesKey("immersive_reader")
         val todayCollapsed = stringPreferencesKey("today_collapsed")
+        val userName = stringPreferencesKey("user_name")
+        val tourSeen = booleanPreferencesKey("tour_seen")
         // Antiguas: la posición vivía aquí (se migra a «state»).
         val lastBook = intPreferencesKey("last_book")
         val lastChapter = intPreferencesKey("last_chapter")
@@ -130,6 +136,8 @@ class SettingsRepository(private val context: Context) {
         keepScreenOn = this[K.keepScreenOn] ?: true,
         immersiveReader = this[K.immersiveReader] ?: true,
         todayCollapsed = this[K.todayCollapsed] ?: "",
+        userName = this[K.userName] ?: "",
+        tourSeen = this[K.tourSeen] ?: false,
     )
 
     suspend fun current(): AppSettings = settings.first()
@@ -146,6 +154,7 @@ class SettingsRepository(private val context: Context) {
             p[K.ttsLocale] = s.ttsLocale; p[K.ttsRate] = s.ttsRate; p[K.audioContinue] = s.audioContinue
             p[K.autoBackupUri] = s.autoBackupUri; p[K.autoBackupDays] = s.autoBackupDays; p[K.onboarded] = s.onboarded; p[K.updateCheck] = s.updateCheck
             p[K.keepScreenOn] = s.keepScreenOn; p[K.immersiveReader] = s.immersiveReader; p[K.todayCollapsed] = s.todayCollapsed
+            p[K.userName] = s.userName; p[K.tourSeen] = s.tourSeen
         }
     }
 

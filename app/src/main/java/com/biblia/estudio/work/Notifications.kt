@@ -112,7 +112,7 @@ object Notifications {
         val extra = if (due > 0) "\n\nTienes $due versículo${if (due > 1) "s" else ""} para repasar de memoria." else ""
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Versículo del día · $label")
+            .setContentTitle(com.biblia.estudio.domain.Greeting.now(settings.userName.substringBefore(" ")) + " · " + label)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\nTu pasaje, lección, oración y preguntas de hoy te esperan.$extra"))
             .setContentIntent(pi)

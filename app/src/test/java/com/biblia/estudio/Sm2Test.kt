@@ -72,4 +72,13 @@ class Sm2Test {
         assertEquals(3, Gamification.bestStreak(act))
         assertEquals("Discípulo", Gamification.level(300).name)
     }
+
+    @Test fun greetingByTimeOfDay() {
+        val g = com.biblia.estudio.domain.Greeting
+        assertEquals("Buenos días, Ana", g.forTime(java.time.LocalTime.of(7, 30), "Ana"))
+        assertEquals("Buenas tardes, Ana", g.forTime(java.time.LocalTime.of(12, 0), "Ana"))
+        assertEquals("Buenas tardes", g.forTime(java.time.LocalTime.of(18, 59), "  "))
+        assertEquals("Buenas noches, Ana", g.forTime(java.time.LocalTime.of(19, 0), "Ana"))
+        assertEquals("Buenas noches, Ana", g.forTime(java.time.LocalTime.of(2, 0), "Ana"))
+    }
 }
