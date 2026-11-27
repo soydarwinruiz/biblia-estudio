@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "1.9",
-  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.9/codice-vivo-1.9.apk",
-  "notes": "Recorrido de bienvenida que explica cómo usar la app y saludo personal con tu nombre según la hora del día."
+  "versionCode": 12,
+  "versionName": "1.9.1",
+  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.9.1/codice-vivo-1.9.1.apk",
+  "notes": "Corrige el teclado que tapaba lo que escribes y el botón Completar de la lección del día; la reflexión se guarda sola."
 }

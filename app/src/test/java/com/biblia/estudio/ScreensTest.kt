@@ -421,4 +421,24 @@ class ScreensTest {
         rule.onNodeWithText("Ver el recorrido de bienvenida").performClick()
         waitText("Comenzar recorrido")
     }
+
+    @Test fun lessonReflectionAutosaveAndComplete() {
+        start()
+        reset()
+        val app = rule.activity.app
+        waitText("Estudiar lección")
+        rule.onNodeWithText("Estudiar lección").performScrollTo().performClick()
+        waitText("Mi reflexión")
+        rule.onNode(hasSetTextAction()).performScrollTo().performTextInput("Dios es el centro de todo.")
+        // Se guarda sola, sin botón
+        waitText("Reflexión guardada ✓")
+        val lessonId = kotlinx.coroutines.runBlocking { app.content.lessonOfDay(com.biblia.estudio.data.user.today()).id }
+        rule.waitUntil(10_000) { kotlinx.coroutines.runBlocking { app.user.dao.dumpReflections().any { it.lessonId == lessonId && it.text == "Dios es el centro de todo." } } }
+        // «Completar» marca la lección y cambia a «Completada ✓»
+        rule.onNodeWithText("Completar").performScrollTo().performClick()
+        waitText("Completada ✓")
+        shot("45_leccion_completada")
+        val done = kotlinx.coroutines.runBlocking { app.user.dao.dumpDevotional().any { it.type == "lesson" && it.epochDay == com.biblia.estudio.data.user.today() } }
+        org.junit.Assert.assertTrue(done)
+    }
 }
