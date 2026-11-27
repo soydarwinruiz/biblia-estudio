@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -71,6 +72,17 @@ fun SettingsScreen(nav: NavController, s: AppSettings) {
 
     Scaffold(topBar = { BackTopBar("Ajustes", { nav.popBackStack() }) }) { pad ->
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
+            SectionHeader("Tú")
+            var nameDraft by remember(s.userName) { mutableStateOf(s.userName) }
+            OutlinedTextField(nameDraft, { nameDraft = it.take(40) }, Modifier.fillMaxWidth().padding(horizontal = 16.dp), singleLine = true,
+                label = { Text("Tu nombre") }, supportingText = { Text("Para saludarte: «" + com.biblia.estudio.domain.Greeting.now(nameDraft.substringBefore(" ")) + "»") },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { set { it.copy(userName = nameDraft.trim()) } }),
+                trailingIcon = { if (nameDraft.trim() != s.userName) TextButton(onClick = { set { it.copy(userName = nameDraft.trim()) } }) { Text("Guardar") } })
+            ListItem(headlineContent = { Text("Ver el recorrido de bienvenida") }, supportingContent = { Text("Cómo usar cada parte de la app") },
+                leadingContent = { Icon(androidx.compose.material.icons.Icons.Filled.Info, null) },
+                modifier = Modifier.clickable { set { it.copy(tourSeen = false) } })
+
             SectionHeader("Apariencia")
             FlowRow(Modifier.padding(horizontal = 16.dp)) {
                 ThemeMode.entries.forEach { m -> FilterChip(s.theme == m, { set { it.copy(theme = m) } }, { Text(m.label) }, Modifier.padding(end = 8.dp)) }

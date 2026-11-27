@@ -61,6 +61,10 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
     val day = realToday + offset
     val isToday = offset == 0
     val posOrNull by c.settings.position.collectAsState(initial = null)
+    // «Buenos días, Ana»: se actualiza solo al cambiar la franja del día
+    var clock by remember { mutableStateOf(java.time.LocalTime.now()) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(60_000); clock = java.time.LocalTime.now() } }
+    val greeting = com.biblia.estudio.domain.Greeting.forTime(clock, settings.userName.substringBefore(" "))
     // Actividades de la agenda en los próximos 7 días (máx. 3)
     val startOfToday = remember { java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
     val allEvents by remember { c.user.dao.events() }.collectAsState(initial = emptyList())
@@ -94,7 +98,7 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
     val mark: (String) -> (() -> Unit)? = { type -> if (isToday) ({ scope.launch { c.user.markDevotional(type) } }) else null }
 
     Scaffold(topBar = {
-        TopAppBar(title = { Column { Text(if (isToday) "Hoy" else "Días anteriores"); Text(dateLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        TopAppBar(title = { Column { Text(if (isToday) "Hoy" else "Días anteriores", maxLines = 1, overflow = TextOverflow.Ellipsis); Text(dateLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
             actions = {
                 IconButton(onClick = { offset-- }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Día anterior") }
                 IconButton(onClick = { offset++ }, enabled = offset < 0) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Día siguiente") }
@@ -111,6 +115,9 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
         } } }
         CompositionLocalProvider(LocalFold provides fold) {
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
+            // Saludo personal según la hora («Buenos días, Ana»)
+            if (isToday) Text(greeting, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 6.dp))
             Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.navigate("progress") },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {

@@ -72,7 +72,8 @@ class MainActivity : ComponentActivity() {
             BibliaTheme(settings.theme, settings.dynamicColor) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when {
-                        ready && settingsOrNull != null && !settings.onboarded -> OnboardingScreen(settings)
+                        // Bienvenida y recorrido: la primera vez, una vez tras actualizar a la 1.9 y cuando se pide desde Ajustes
+                        ready && settingsOrNull != null && (!settings.onboarded || !settings.tourSeen) -> OnboardingScreen(settings)
                         ready && settingsOrNull != null -> AppRoot(settings, pendingIntent?.let { routeFor(it) }) { incoming.value = null }
                         else -> Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Códice vivo", style = MaterialTheme.typography.headlineSmall)

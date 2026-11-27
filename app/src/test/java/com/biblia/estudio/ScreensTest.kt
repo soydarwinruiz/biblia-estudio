@@ -24,18 +24,18 @@ class ScreensTest {
     /** Las preferencias persisten entre pruebas: empezar siempre en Juan 1 con tema claro. */
     private fun reset() = kotlinx.coroutines.runBlocking {
         val a = rule.activity.app
-        a.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT, onboarded = true, immersiveReader = false, todayCollapsed = "") }
+        a.settings.update { it.copy(theme = com.biblia.estudio.data.prefs.ThemeMode.LIGHT, onboarded = true, tourSeen = true, immersiveReader = false, todayCollapsed = "") }
         a.settings.setPosition(43, 1); a.position = com.biblia.estudio.data.prefs.ReadingPosition(43, 1)
     }
 
     /** La primera vez aparece la bienvenida: se captura y se marca como vista. */
     private fun start() {
         rule.waitUntil(60_000) {
-            rule.onAllNodesWithText("Empezar").fetchSemanticsNodes().isNotEmpty() || rule.onAllNodesWithText("Leer pasaje").fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText("Comenzar recorrido").fetchSemanticsNodes().isNotEmpty() || rule.onAllNodesWithText("Leer pasaje").fetchSemanticsNodes().isNotEmpty()
         }
-        if (rule.onAllNodesWithText("Empezar").fetchSemanticsNodes().isNotEmpty()) {
+        if (rule.onAllNodesWithText("Comenzar recorrido").fetchSemanticsNodes().isNotEmpty()) {
             shot("00_bienvenida")
-            kotlinx.coroutines.runBlocking { rule.activity.app.settings.update { it.copy(onboarded = true) } }
+            kotlinx.coroutines.runBlocking { rule.activity.app.settings.update { it.copy(onboarded = true, tourSeen = true) } }
         }
         waitText("Leer pasaje")
     }
@@ -384,5 +384,41 @@ class ScreensTest {
         rule.onNode(hasSetTextAction() and hasText("Título del estudio")).performTextInput("Sacrificio vivo")
         rule.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         rule.waitUntil(10_000) { kotlinx.coroutines.runBlocking { app.user.dao.dumpStudies().any { it.title == "Sacrificio vivo" } } }
+    }
+
+    @Test fun welcomeTourWithName() {
+        rule.waitUntil(60_000) {
+            rule.onAllNodesWithText("Comenzar recorrido").fetchSemanticsNodes().isNotEmpty() || rule.onAllNodesWithText("Leer pasaje").fetchSemanticsNodes().isNotEmpty()
+        }
+        // Los ajustes pueden venir de otra prueba: se vuelve a pedir el recorrido (como desde Ajustes)
+        kotlinx.coroutines.runBlocking { rule.activity.app.settings.update { it.copy(tourSeen = false, userName = "") } }
+        rule.waitUntil(30_000) { rule.onAllNodesWithText("Comenzar recorrido").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNode(hasSetTextAction()).performTextInput("Ana María")
+        waitText("¡Mucho gusto, Ana!", true)
+        shot("40_tour_nombre")
+        rule.onNodeWithText("Comenzar recorrido").performClick()
+        waitText("Tu devocional de cada día", true)
+        shot("41_tour_hoy")
+        repeat(2) { rule.onNodeWithText("Siguiente").performClick() }
+        waitText("Toca un versículo")
+        shot("42_tour_versiculo")
+        rule.onNodeWithText("Saltar").performClick()
+        waitText("Último paso, Ana")
+        shot("43_tour_final")
+        // Sin recordatorio para no pedir el permiso de notificaciones en la prueba
+        rule.onNode(isToggleable()).performClick()
+        rule.onNodeWithText("Empezar").performClick()
+        waitText("Leer pasaje")
+        val expected = com.biblia.estudio.domain.Greeting.now("Ana")   // «Buenos días, Ana», etc.
+        rule.waitUntil(10_000) { rule.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty() }
+        shot("44_hoy_saludo")
+        val st = kotlinx.coroutines.runBlocking { rule.activity.app.settings.current() }
+        org.junit.Assert.assertEquals("Ana María", st.userName)
+        org.junit.Assert.assertTrue(st.tourSeen && st.onboarded)
+        // Repetir el recorrido desde Ajustes
+        rule.onNodeWithContentDescription("Ajustes").performClick()
+        waitText("Ver el recorrido de bienvenida")
+        rule.onNodeWithText("Ver el recorrido de bienvenida").performClick()
+        waitText("Comenzar recorrido")
     }
 }
