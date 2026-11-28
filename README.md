@@ -142,7 +142,7 @@ pon la clave en `keystore/` y ejecuta `./gradlew assembleRelease`. El APK listo 
 Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
 ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/codice-vivo-1.9.2.apk
+adb install -r app/build/outputs/apk/release/codice-vivo-1.9.3.apk
 ./gradlew testDebugUnitTest    # 37 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
 ```
 
