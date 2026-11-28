@@ -108,6 +108,12 @@ para comprobar una vez al día si hay una versión nueva (lee un archivo públic
 3. Actualiza `android-version.json` (en la raíz de este repositorio) con el nuevo `versionCode`, el nombre,
    el enlace de la Release y las notas, y súbelo a `main`. Las apps instaladas lo verán en las siguientes 24 horas.
 
+**Sin computadora (GitHub Actions):** sube `versionCode` y `versionName` en `app/build.gradle.kts` (en `main`),
+luego en GitHub ve a **Actions → Publicar versión → Run workflow** y escribe las notas. Compila y firma el APK,
+crea la Release `vX.Y.Z` y actualiza `android-version.json` solo. Requiere, una sola vez, estos *secrets*
+en **Settings → Secrets and variables → Actions**: `CODICE_KEYSTORE_BASE64` (la clave `.jks` en base64:
+`base64 -w0 keystore/codice-vivo.jks`), `CODICE_STORE_PASSWORD`, `CODICE_KEY_PASSWORD` y `CODICE_KEY_ALIAS`.
+
 ### Novedades de la 1.5
 - **Diario**: peticiones de oración con «respondida» (fecha y cómo respondió Dios) y entradas de diario; se puede orar desde un versículo (botón «Orar» del lector).
 - **Respaldo automático** diario o semanal en una carpeta que elijas (se guardan las últimas 7 copias). La copia de Google del teléfono ahora sí incluye tus datos (antes la base de la Biblia, de ~110 MB, superaba el límite de 25 MB y no se respaldaba nada).

@@ -1,0 +1,110 @@
+# Compila el APK firmado y publica la Release en GitHub, sin que la clave salga de los «secrets» del repositorio.
+#
+# Uso: pestaña Actions → «Publicar versión» → Run workflow → escribe las notas de la versión.
+# Toma versionCode y versionName de app/build.gradle.kts (súbelos antes), crea la Release vX.Y.Z con
+# codice-vivo-X.Y.Z.apk y actualiza android-version.json en main para que las apps instaladas la vean.
+#
+# Secrets necesarios (Settings → Secrets and variables → Actions):
+#   CODICE_KEYSTORE_BASE64  la clave keystore/codice-vivo.jks codificada en base64
+#   CODICE_STORE_PASSWORD   contraseña del almacén
+#   CODICE_KEY_PASSWORD     contraseña de la clave (si es la misma, repítela)
+#   CODICE_KEY_ALIAS        alias de la clave (normalmente «codice»)
+name: Publicar versión
+
+on:
+  workflow_dispatch:
+    inputs:
+      notas:
+        description: "Notas de la versión (se muestran en la app al avisar de la actualización)"
+        required: true
+      publicar:
+        description: "Crear la Release y avisar a las apps instaladas (si no, solo compila el APK)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency: publicar
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Leer la versión
+        id: version
+        run: |
+          code=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts)
+          name=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "Versión $name ($code)"
+          if [ "${{ inputs.publicar }}" = "true" ] && gh release view "v$name" >/dev/null 2>&1; then
+            echo "::error::Ya existe la Release v$name. Sube versionCode y versionName en app/build.gradle.kts."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Preparar la clave de firma
+        env:
+          KS: ${{ secrets.CODICE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS" ]; then echo "::error::Falta el secret CODICE_KEYSTORE_BASE64"; exit 1; fi
+          echo "$KS" | base64 -d > keystore/codice-vivo.jks
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Compilar y firmar
+        env:
+          CODICE_STORE_PASSWORD: ${{ secrets.CODICE_STORE_PASSWORD }}
+          CODICE_KEY_PASSWORD: ${{ secrets.CODICE_KEY_PASSWORD }}
+          CODICE_KEY_ALIAS: ${{ secrets.CODICE_KEY_ALIAS }}
+        run: |
+          if [ -z "$CODICE_STORE_PASSWORD" ]; then echo "::error::Falta el secret CODICE_STORE_PASSWORD"; exit 1; fi
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          apk="app/build/outputs/apk/release/codice-vivo-${{ steps.version.outputs.name }}.apk"
+          test -f "$apk" || { echo "::error::No se generó $apk (¿firma fallida?)"; exit 1; }
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$bt/apksigner" verify --print-certs "$apk" | grep -i "signer" | head -3
+
+      - name: Borrar la clave
+        if: always()
+        run: rm -f keystore/codice-vivo.jks
+
+      - name: Guardar el APK en esta ejecución
+        uses: actions/upload-artifact@v4
+        with:
+          name: codice-vivo-${{ steps.version.outputs.name }}
+          path: app/build/outputs/apk/release/codice-vivo-${{ steps.version.outputs.name }}.apk
+
+      - name: Crear la Release y avisar a las apps
+        if: inputs.publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTAS: ${{ inputs.notas }}
+          CODE: ${{ steps.version.outputs.code }}
+          NAME: ${{ steps.version.outputs.name }}
+        run: |
+          apk="app/build/outputs/apk/release/codice-vivo-$NAME.apk"
+          gh release create "v$NAME" "$apk" --target main --title "Códice vivo $NAME" --notes "$NOTAS"
+          url="https://github.com/${{ github.repository }}/releases/download/v$NAME/codice-vivo-$NAME.apk"
+          jq -n --argjson code "$CODE" --arg name "$NAME" --arg url "$url" --arg notes "$NOTAS" \
+            '{versionCode: $code, versionName: $name, url: $url, notes: $notes}' > android-version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android-version.json
+          git commit -m "android-version.json: $NAME"
+          git push origin HEAD:main
