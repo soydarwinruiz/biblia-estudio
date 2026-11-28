@@ -98,7 +98,7 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
     val mark: (String) -> (() -> Unit)? = { type -> if (isToday) ({ scope.launch { c.user.markDevotional(type) } }) else null }
 
     Scaffold(topBar = {
-        TopAppBar(title = { Column { Text(if (isToday) "Hoy" else "Días anteriores", maxLines = 1, overflow = TextOverflow.Ellipsis); Text(dateLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        TopAppBar(title = { Text(if (isToday) "Hoy" else "Días anteriores", maxLines = 1, overflow = TextOverflow.Ellipsis) },
             actions = {
                 IconButton(onClick = { offset-- }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Día anterior") }
                 IconButton(onClick = { offset++ }, enabled = offset < 0) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Día siguiente") }
@@ -116,8 +116,10 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
         CompositionLocalProvider(LocalFold provides fold) {
         Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 16.dp)) {
             // Saludo personal según la hora («Buenos días, Ana»)
-            if (isToday) Text(greeting, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 6.dp))
+            Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 6.dp)) {
+                if (isToday) Text(greeting, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                Text(dateLabel.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable { nav.navigate("progress") },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -148,7 +150,7 @@ fun TodayScreen(nav: NavController, settings: AppSettings) {
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("🧠", style = MaterialTheme.typography.titleLarge)
-                    Text("Tienes $memoryDue versículo${if (memoryDue > 1) "s" else ""} para repasar de memoria", Modifier.weight(1f).padding(start = 12.dp))
+                    Text(if (memoryDue == 1) "1 versículo por repasar" else "$memoryDue versículos por repasar", Modifier.weight(1f).padding(start = 12.dp))
                     TextButton(onClick = { nav.navigate("memory") }) { Text("Repasar") }
                 }
             }

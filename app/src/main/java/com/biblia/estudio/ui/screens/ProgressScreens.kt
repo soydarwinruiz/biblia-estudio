@@ -75,9 +75,12 @@ fun ProgressScreen(nav: NavController) {
                             LinearProgressIndicator(progress = { (points - level.min).toFloat() / (next - level.min) }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
                             Text("$points / $next puntos para el siguiente nivel", style = MaterialTheme.typography.labelMedium)
                         } else Text("$points puntos · ¡nivel máximo!")
-                        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            StatPill("🔥", "${stats.streak}", "racha"); StatPill("🏅", "${stats.bestStreak}", "mejor racha")
-                            StatPill("❓", "${stats.quizDays}", "cuestionarios"); StatPill("🎯", "${stats.perfectQuizzes}", "perfectos")
+                        // 2 × 2 para que las etiquetas largas quepan con cualquier tamaño de letra
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            StatPill("🔥", "${stats.streak}", "racha", Modifier.weight(1f)); StatPill("🏅", "${stats.bestStreak}", "mejor racha", Modifier.weight(1f))
+                        }
+                        Row(Modifier.fillMaxWidth()) {
+                            StatPill("❓", "${stats.quizDays}", "cuestionarios", Modifier.weight(1f)); StatPill("🎯", "${stats.perfectQuizzes}", "perfectos", Modifier.weight(1f))
                         }
                     }
                 }

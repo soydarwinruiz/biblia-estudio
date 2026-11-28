@@ -70,7 +70,7 @@ fun MemoryScreen(nav: NavController, settings: AppSettings) {
             item {
                 Card(Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("${all.size} versículos · ${all.count { it.box >= 6 }} memorizados", style = MaterialTheme.typography.titleMedium)
+                        Text("${all.size} versículo${if (all.size == 1) "" else "s"} · ${all.count { it.box >= 6 }} memorizado${if (all.count { it.box >= 6 } == 1) "" else "s"}", style = MaterialTheme.typography.titleMedium)
                         Text("Repaso espaciado (SM-2): según lo bien que recuerdes cada versículo, el siguiente repaso se aleja más o menos. Puedes recitarlo o escribirlo para comprobarlo palabra por palabra.", style = MaterialTheme.typography.bodySmall)
                         Button(onClick = { session = due; idx = 0; known = 0 }, enabled = due.isNotEmpty(), modifier = Modifier.padding(top = 8.dp)) {
                             Text(if (due.isEmpty()) "Nada pendiente hoy" else "Repasar ahora (${due.size})")
@@ -167,6 +167,6 @@ private fun days(n: Int) = if (n == 1) "1 día" else if (n < 30) "$n días" else
 
 @Composable
 private fun GradeLabel(label: String, sub: String) = Column(horizontalAlignment = Alignment.CenterHorizontally) {
-    Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-    Text(sub, style = MaterialTheme.typography.labelSmall)
+    com.biblia.estudio.ui.components.FitText(label, MaterialTheme.typography.labelLarge)
+    com.biblia.estudio.ui.components.FitText(sub, MaterialTheme.typography.labelSmall)
 }

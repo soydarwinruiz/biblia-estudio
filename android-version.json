@@ -1,6 +1,6 @@
 {
-  "versionCode": 12,
-  "versionName": "1.9.1",
-  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.9.1/codice-vivo-1.9.1.apk",
-  "notes": "Corrige el teclado que tapaba lo que escribes y el botón Completar de la lección del día; la reflexión se guarda sola."
+  "versionCode": 13,
+  "versionName": "1.9.2",
+  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.9.2/codice-vivo-1.9.2.apk",
+  "notes": "Textos y botones que ya no se parten con letra grande; Completar de la lección bajo la reflexión."
 }
