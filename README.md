@@ -134,21 +134,24 @@ Descarga el APK de la última versión en **[Releases](https://github.com/soydar
 Se instala encima de la versión anterior sin perder datos. Los APK ya no se guardan en git (cada uno pesaba ~55 MB).
 
 ## Firma
-Desde la 1.7 la app se firma con una **clave nueva** (`keystore/codice-vivo.jks`, que **no** está en el repositorio:
-la guarda el autor). La clave original quedó publicada al hacer público el repositorio, así que se aplicó la
-**rotación de clave de Android** (APK Signature Scheme v3): `keystore/rotacion.lineage` (público, sin secretos)
-demuestra que la clave vieja autoriza a la nueva. Por eso la 1.7 se instala encima de las anteriores sin perder datos
-y, desde entonces, Android rechaza actualizaciones firmadas con la clave vieja.
+**Desde la 1.9.4 la app se firma con otra clave nueva** (`keystore/codice-vivo.jks`, que **no** está en el repositorio).
+La clave de la 1.7–1.9.2 se perdió, así que la 1.9.4 **no se instala encima** de esas versiones: hay que exportar el
+respaldo (Ajustes → Respaldo de datos personales → Exportar), desinstalar, instalar la 1.9.4 e importar el respaldo.
+A partir de la 1.9.4 las actualizaciones vuelven a instalarse encima sin perder datos. La clave y su contraseña están
+en los *secrets* del repositorio (ver «Publicar una versión nueva»); guarda también una copia fuera de GitHub.
+
+(Historia: en la 1.7 se aplicó la rotación de clave de Android con `keystore/rotacion.lineage` porque la clave original
+quedó publicada; ese archivo se retiró en la 1.9.4 al cambiar de clave.)
 
 Para compilar una versión firmada: copia `keystore.properties.example` como `keystore.properties` con la contraseña,
 pon la clave en `keystore/` y ejecuta `./gradlew assembleRelease`. El APK listo para publicar sale en
-`app/build/outputs/apk/release/codice-vivo-<versión>.apk` (firmado con la rotación).
+`app/build/outputs/apk/release/codice-vivo-<versión>.apk` (firmado con la clave).
 
 ## Compilar
 Requisitos: JDK 17+ y Android SDK (plataforma 35). El script `./gradlew` descarga la versión correcta de Gradle.
 ```bash
 ./gradlew assembleRelease
-adb install -r app/build/outputs/apk/release/codice-vivo-1.9.3.apk
+adb install -r app/build/outputs/apk/release/codice-vivo-1.9.4.apk
 ./gradlew testDebugUnitTest    # 37 pruebas: contenido, búsqueda, respaldo, migraciones, temas, agenda y repeticiones, audio, puntos, SM-2 y pantallas
 ```
 

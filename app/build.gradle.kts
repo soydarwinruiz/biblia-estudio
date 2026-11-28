@@ -28,8 +28,8 @@ android {
         // 28 (Android 9): necesario para la rotación de la clave de firma (APK Signature Scheme v3)
         minSdk = 28
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.9.3"
+        versionCode = 15
+        versionName = "1.9.4"
     }
     signingConfigs {
         // Clave propia y estable: permite instalar actualizaciones sin desinstalar.
@@ -135,4 +135,11 @@ val firmarConRotacion by tasks.registering(Exec::class) {
             "--out", File(apkDir, name).path, File(apkDir, "app-release.apk").path)
     }
 }
-afterEvaluate { tasks.named("assembleRelease") { finalizedBy(firmarConRotacion) } }
+// Sin prueba de rotación (clave nueva desde la 1.9.4): el APK ya sale firmado por signingConfig; solo se renombra.
+val copiarApkFirmado by tasks.registering {
+    onlyIf { canSign && !rootProject.file("keystore/rotacion.lineage").exists() }
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release").get().asFile
+    val name = "codice-vivo-${android.defaultConfig.versionName}.apk"
+    doLast { File(apkDir, "app-release.apk").copyTo(File(apkDir, name), overwrite = true) }
+}
+afterEvaluate { tasks.named("assembleRelease") { finalizedBy(firmarConRotacion, copiarApkFirmado) } }
