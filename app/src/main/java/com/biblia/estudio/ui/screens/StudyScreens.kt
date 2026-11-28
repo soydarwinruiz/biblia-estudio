@@ -189,6 +189,9 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
     val total by produceState(0) { value = c.content.lessonCount() }
     val todayId by produceState(-1) { value = c.content.lessonOfDay(today()).id }
     var preview by remember { mutableStateOf<PassageRef?>(null) }
+    // Avanzar más allá de la lección de hoy pide confirmación una vez por visita
+    var askAhead by remember { mutableStateOf(false) }
+    var aheadOk by rememberSaveable { mutableStateOf(false) }
     val reflection by c.user.dao.reflection(id).collectAsState(initial = null)
     // La reflexión se edita en local y se guarda sola (no se pisa con lo guardado mientras se escribe)
     var draft by remember(id) { mutableStateOf<String?>(null) }
@@ -217,7 +220,15 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
     } }) { pad ->
         val l = lesson ?: return@Scaffold Loading()
         Column(Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            if (id == todayId) AssistChip(onClick = {}, label = { Text("Lección de hoy") })
+            // Dónde está esta lección respecto a hoy: cada lección corresponde a un día
+            when {
+                todayId < 0 -> {}
+                id == todayId -> AssistChip(onClick = {}, label = { Text("Lección de hoy") })
+                id > todayId -> AssistChip(onClick = {}, leadingIcon = { Icon(Icons.Filled.Schedule, null, Modifier.size(18.dp)) },
+                    label = { Text("Adelantada · ${lessonDayLabel(id - todayId)}") })
+                else -> AssistChip(onClick = {}, leadingIcon = { Icon(Icons.Filled.History, null, Modifier.size(18.dp)) },
+                    label = { Text("Anterior · ${lessonDayLabel(id - todayId)}") })
+            }
             Text(l.title, style = MaterialTheme.typography.headlineSmall)
             if (l.ref.isNotBlank()) {
                 val r = c.refParser?.parseQuery(l.ref)
@@ -253,14 +264,41 @@ fun LessonScreen(nav: NavController, settings: AppSettings, id0: Int) {
                 if (l.book > 0) TextButton(onClick = { nav.navigate("intro/${l.book}") }) { Text("Ver introducción completa del libro") }
             }
             Spacer(Modifier.height(12.dp))
-            // Navegación entre lecciones: dos botones del mismo ancho, en una sola línea
+            // Navegación entre lecciones: hacia atrás libre; hacia delante hasta la de hoy.
+            // Pasar de hoy se puede, pero se avisa antes porque cada lección es para un día.
+            val nextIsAhead = todayId > 0 && id + 1 > todayId
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(onClick = { id-- }, enabled = id > 1, modifier = Modifier.weight(1f)) { Text("‹ Anterior", maxLines = 1) }
-                OutlinedButton(onClick = { id++ }, enabled = id < total, modifier = Modifier.weight(1f)) { Text("Siguiente ›", maxLines = 1) }
+                OutlinedButton(onClick = { if (nextIsAhead && !aheadOk) askAhead = true else id++ }, enabled = id < total, modifier = Modifier.weight(1f)) {
+                    Text(when { id + 1 == todayId -> "Hoy ›"; nextIsAhead -> "Adelantar ›"; else -> "Siguiente ›" }, maxLines = 1)
+                }
+            }
+            if (todayId > 0 && id != todayId) TextButton(onClick = { id = todayId }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Icon(Icons.Filled.Today, null); Text("  Ir a la lección de hoy")
             }
         }
     }
     preview?.let { RefPreviewDialog(it, { preview = null }) { r -> nav.openRef(r) } }
+    if (askAhead) AlertDialog(onDismissRequest = { askAhead = false },
+        icon = { Icon(Icons.Filled.Schedule, null) },
+        title = { Text("¿Adelantar la lección?") },
+        text = { Text("La lección ${id + 1} corresponde a ${lessonDayLabel(id + 1 - todayId)}. Las lecciones están pensadas para una cada día; " +
+            "puedes leerla ya, pero solo la lección de hoy cuenta para tu racha y tus puntos.") },
+        confirmButton = { TextButton(onClick = { askAhead = false; aheadOk = true; id++ }) { Text("Leer por adelantado") } },
+        dismissButton = { TextButton(onClick = { askAhead = false }) { Text("Esperar") } })
+}
+
+/** «mañana», «ayer», «dentro de 3 días», «hace 5 días» con la fecha: para situar una lección respecto a hoy. */
+internal fun lessonDayLabel(offset: Int): String {
+    val date = java.time.LocalDate.ofEpochDay(today() + offset)
+        .format(java.time.format.DateTimeFormatter.ofPattern("d 'de' MMMM", java.util.Locale("es")))
+    return when {
+        offset == 1 -> "mañana ($date)"
+        offset == -1 -> "ayer ($date)"
+        offset > 1 -> "dentro de $offset días ($date)"
+        offset < -1 -> "hace ${-offset} días ($date)"
+        else -> "hoy"
+    }
 }
 
 @Composable
@@ -273,10 +311,16 @@ fun LessonsListScreen(nav: NavController) {
     val c = LocalContext.current.app
     val list by produceState(emptyList<Pair<Int, String>>()) { value = c.content.lessonTitles() }
     val todayId by produceState(-1) { value = c.content.lessonOfDay(today()).id }
+    // La lista se abre situada en la lección de hoy
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(todayId, list.size) { if (todayId > 0 && list.size >= todayId && listState.firstVisibleItemIndex == 0) listState.scrollToItem((todayId - 2).coerceAtLeast(0)) }
     Scaffold(topBar = { BackTopBar("Lecciones", { nav.popBackStack() }) }) { pad ->
-        LazyColumn(Modifier.padding(pad)) {
+        LazyColumn(Modifier.padding(pad), state = listState) {
             items(list) { (id, title) ->
-                ListItem(leadingContent = { Text("$id", color = MaterialTheme.colorScheme.primary) }, headlineContent = { Text(title) },
+                val ahead = todayId > 0 && id > todayId
+                ListItem(leadingContent = { Text("$id", color = MaterialTheme.colorScheme.primary) },
+                    headlineContent = { Text(title, color = if (ahead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface) },
+                    supportingContent = if (ahead) ({ Text(lessonDayLabel(id - todayId).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall) }) else null,
                     trailingContent = { if (id == todayId) Text("Hoy", color = MaterialTheme.colorScheme.tertiary) },
                     modifier = Modifier.clickable { nav.navigate("lesson/$id") })
             }
