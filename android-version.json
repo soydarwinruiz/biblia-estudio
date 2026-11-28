@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "1.9.2",
-  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.9.2/codice-vivo-1.9.2.apk",
-  "notes": "Textos y botones que ya no se parten con letra grande; Completar de la lección bajo la reflexión."
+  "versionCode": 15,
+  "versionName": "1.9.4",
+  "url": "https://github.com/soydarwinruiz/biblia-estudio/releases/download/v1.9.4/codice-vivo-1.9.4.apk",
+  "notes": "Clave de firma nueva. IMPORTANTE: antes de instalar, en tu app actual ve a Ajustes → Respaldo de datos personales → Exportar; luego desinstala la app vieja, instala esta e importa el respaldo. Desde esta versión las actualizaciones se instalan encima sin perder datos. Incluye: las lecciones futuras avisan antes de adelantarlas."
 }
